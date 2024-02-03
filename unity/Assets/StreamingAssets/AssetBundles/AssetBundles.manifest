@@ -1,0 +1,7 @@
+ManifestFileVersion: 0
+CRC: 131749531
+AssetBundleManifest:
+  AssetBundleInfos:
+    Info_0:
+      Name: dspshaders-bundle
+      Dependencies: {}

@@ -1,0 +1,98 @@
+struct GPUOBJECT {
+    uint objId;
+    float3 pos;
+    float4 rot;
+};
+
+float3 _CameraPos;
+float3 _CameraFwd;
+float _CullingDot;
+float _PlanetRadius;
+float _CullingRadius;
+float _CullingHeight;
+float _Unk;
+float _LOD_0_Dist;
+
+
+RWStructuredBuffer<GPUOBJECT> _InstBuffer;
+AppendStructuredBuffer<uint> _LOD_0_ID_Buffer;
+
+[numthreads(16, 1, 1)]
+void main(uint3 vThreadID : SV_DispatchThreadID)
+{
+    float4 r0,r1,r2,r3;
+    
+    uint objId = _InstBuffer[vThreadID.x].objId; //r0.x
+    if (objId)
+    {
+        float3 pos = _InstBuffer[vThreadID.x].pos; //r0.xyz
+        float3 upDir = normalize(pos); //r1.xyz
+        float3 camToBounds = (_CullingHeight * normalize(pos) + pos) - _CameraPos.xyz; //r1.xyz
+        float distCamToBounds = length(camToBounds); //r0.w
+        
+        bool ShouldRender = true;
+        [branch]
+        if (distCamToBounds >= 0.1)
+        {
+            float3 camToBoundsDir = camToBounds / distCamToBounds; //r1.xyz
+            float angleFromCenterScreen = dot(camToBoundsDir, _CameraFwd.xyz); // r1.w
+            bool objCanFitInFrame = distCamToBounds > 3.0 * _CullingHeight;
+            objCanFitInFrame = objCanFitInFrame || distCamToBounds > 70;
+            objCanFitInFrame = objCanFitInFrame && distCamToBounds > 30;
+            
+            // bounds of the screen, expanded by culling height after being ajusted by the distance from camera
+            float screenBounds = _CullingDot - 2.0 * (_CullingHeight / distCamToBounds);
+            
+            // if obj is perfectly center, angleFromCenterScreen = 1.
+            // if it's directly 90deg from the center, angleFromCenterScreen = 0.
+            // if behind, angleFromCenterScreen = -1
+            // So, a smaller number means it's further from center, and if it's less than the
+            // screen area threshold (_CullingDot) with added padding for the size of the object (_CullingHeight), it must be offscreen
+            bool IsOffscreen = angleFromCenterScreen < screenBounds;
+            
+            // if the object is too close to the camera, IsOffscreen might be true. Make sure it's far enough away to be considered offscreen.
+            IsOffscreen = IsOffscreen && objCanFitInFrame; //r1.w
+            
+            ShouldRender = !IsOffscreen;
+            
+            // if IsOffscreen == true -> 0
+            // if IsOffscreen == false -> -1
+            [branch]
+            if (IsOffscreen == false)
+            {
+                // [-camHeight, camHeight]
+                // -camHeight if directly above camera
+                // 0 if perpendicular to camera
+                // camHeight if directly below camera
+                float angleDownBounds = dot(camToBoundsDir.xyz, -_CameraPos.xyz); //r1.x
+                float camHeightSqr = dot(_CameraPos.xyz, _CameraPos.xyz); //r1.y
+                float fullRadius = _PlanetRadius + _CullingRadius; //r1.z
+                
+                bool IsCamLowerThanObj = pow(fullRadius, 2) >= camHeightSqr; //r1.w
+                bool IsCamHigherThanObj = IsCamLowerThanObj == false; //r2.y
+                bool IsObjAboveCam = 0 >= angleDownBounds;
+                bool IsAboveViewMaybe = IsObjAboveCam || fullRadius < (angleDownBounds - distCamToBounds); //r2.z
+                bool IsAboveCamPlane = IsAboveViewMaybe || IsCamHigherThanObj; //r2.w
+                
+                float unkR1Y = fullRadius * fullRadius - (camHeightSqr - angleDownBounds * angleDownBounds); //r1.y
+                bool IsBelowCamPlaneMaybe = unkR1Y < 0; //r1.z
+                bool IsOutsideOfCamPlane = IsBelowCamPlaneMaybe || IsAboveCamPlane;
+                bool unkR0W = distCamToBounds < angleDownBounds - sqrt(unkR1Y); //r0.w
+                
+                ShouldRender = IsCamLowerThanObj ? IsCamHigherThanObj : (IsAboveViewMaybe ? IsAboveCamPlane : (IsBelowCamPlaneMaybe ? IsOutsideOfCamPlane : unkR0W && (unkR0W || IsOutsideOfCamPlane)));
+            }
+        }
+    
+        if (!ShouldRender)
+            return;
+    
+        float distSqrCamToPos = dot(pos - _CameraPos.xyz, pos - _CameraPos.xyz); //r0.x //this was a dot(x,x), right?
+        float distSqrLOD0 = _LOD_0_Dist * _LOD_0_Dist; //r0.y
+        
+        if (distSqrCamToPos < distSqrLOD0) {
+            _LOD_0_ID_Buffer.Append(vThreadID.x);
+        }
+    }
+    
+    return;
+}

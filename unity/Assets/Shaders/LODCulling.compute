@@ -401,7 +401,7 @@ void _4LODCulling(uint3 vThreadID : SV_DispatchThreadID)
         float distThresholdSqrLOD0 = _LOD_0_Dist * _LOD_0_Dist;
         float distThresholdSqrLOD1 = _LOD_1_Dist * _LOD_1_Dist;
         float distThresholdSqrLOD2 = _LOD_2_Dist * _LOD_2_Dist;
-        float distThresholdSqrLOD2 = _LOD_3_Dist * _LOD_3_Dist;
+        float distThresholdSqrLOD3 = _LOD_3_Dist * _LOD_3_Dist;
         
         if (distSqrCamToPos < distThresholdSqrLOD0)
         {

@@ -15,7 +15,7 @@ namespace ShaderSwap
         public const string VERSION = "1.0.0";
         
         private static readonly string AssemblyPath = Path.GetDirectoryName(Assembly.GetAssembly(typeof(ShaderSwap)).Location);
-        private static AssetBundle bundle;
+        public static AssetBundle bundle;
         
         public static ManualLogSource logger;
         

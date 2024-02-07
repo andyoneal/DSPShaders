@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using HarmonyLib;
-using JetBrains.Annotations;
 using UnityEngine;
 
 namespace ShaderSwap;
@@ -72,5 +71,17 @@ public static class SwapShaderPatches
         ReplaceShaderMap.Add(oriShaderName, replacementShader);
         ShaderSwap.logger.LogInfo($"Added Mapping. {oriShaderName} -> {replacementShader.name}");
         
+    }
+    
+    [HarmonyPatch(typeof(Configs), nameof(Configs.Awake))]
+    [HarmonyPostfix]
+    public static void Configs_Awake(Configs __instance)
+    {
+        ComputeShader LODCulling = ShaderSwap.bundle.LoadAsset<ComputeShader>("LODCulling");
+        if (LODCulling != null)
+        {
+            __instance.m_gpgpu.LODCullingShader = LODCulling;
+            ShaderSwap.logger.LogInfo($"Replaced LODCulling compute shader");
+        }
     }
 }

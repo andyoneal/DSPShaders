@@ -1,3 +1,6 @@
+#pragma kernel _1LODCulling
+#pragma enable_d3d11_debug_symbols
+
 struct GPUOBJECT {
     uint objId;
     float3 pos;
@@ -13,32 +16,27 @@ float _CullingHeight;
 float _Unk;
 float _LOD_0_Dist;
 
-
 RWStructuredBuffer<GPUOBJECT> _InstBuffer;
 AppendStructuredBuffer<uint> _LOD_0_ID_Buffer;
 
 [numthreads(16, 1, 1)]
-void main(uint3 vThreadID : SV_DispatchThreadID)
+void _1LODCulling(uint3 vThreadID : SV_DispatchThreadID)
 {
-    float4 r0,r1,r2,r3;
     
-    uint objId = _InstBuffer[vThreadID.x].objId; //r0.x
+    uint objId = _InstBuffer[vThreadID.x].objId;
     if (objId)
     {
-        float3 pos = _InstBuffer[vThreadID.x].pos; //r0.xyz
-        float3 upDir = normalize(pos); //r1.xyz
-        float3 camToBounds = (_CullingHeight * normalize(pos) + pos) - _CameraPos.xyz; //r1.xyz
-        float distCamToBounds = length(camToBounds); //r0.w
+        float3 pos = _InstBuffer[vThreadID.x].pos;
+        float3 camToBounds = (_CullingHeight * normalize(pos) + pos) - _CameraPos.xyz;
+        float distCamToBounds = length(camToBounds);
         
         bool ShouldRender = true;
         [branch]
         if (distCamToBounds >= 0.1)
         {
-            float3 camToBoundsDir = camToBounds / distCamToBounds; //r1.xyz
-            float angleFromCenterScreen = dot(camToBoundsDir, _CameraFwd.xyz); // r1.w
-            bool objCanFitInFrame = distCamToBounds > 3.0 * _CullingHeight;
-            objCanFitInFrame = objCanFitInFrame || distCamToBounds > 70;
-            objCanFitInFrame = objCanFitInFrame && distCamToBounds > 30;
+            float3 dirCamToBounds = camToBounds / distCamToBounds;
+            float angleFromCenterScreen = dot(dirCamToBounds, _CameraFwd.xyz);
+            bool objCanFitInFrame = distCamToBounds > 30 && (distCamToBounds > 3.0 * _CullingHeight || distCamToBounds > 70);
             
             // bounds of the screen, expanded by culling height after being ajusted by the distance from camera
             float screenBounds = _CullingDot - 2.0 * (_CullingHeight / distCamToBounds);
@@ -51,12 +49,9 @@ void main(uint3 vThreadID : SV_DispatchThreadID)
             bool IsOffscreen = angleFromCenterScreen < screenBounds;
             
             // if the object is too close to the camera, IsOffscreen might be true. Make sure it's far enough away to be considered offscreen.
-            IsOffscreen = IsOffscreen && objCanFitInFrame; //r1.w
-            
+            IsOffscreen = IsOffscreen && objCanFitInFrame;
             ShouldRender = !IsOffscreen;
             
-            // if IsOffscreen == true -> 0
-            // if IsOffscreen == false -> -1
             [branch]
             if (IsOffscreen == false)
             {
@@ -64,32 +59,49 @@ void main(uint3 vThreadID : SV_DispatchThreadID)
                 // -camHeight if directly above camera
                 // 0 if perpendicular to camera
                 // camHeight if directly below camera
-                float angleDownBounds = dot(camToBoundsDir.xyz, -_CameraPos.xyz); //r1.x
-                float camHeightSqr = dot(_CameraPos.xyz, _CameraPos.xyz); //r1.y
-                float fullRadius = _PlanetRadius + _CullingRadius; //r1.z
+                float3 camToPlanetCenter = float3(0,0,0) - _CameraPos.xyz;
+                float angleCamPlanetToBounds = dot(dirCamToBounds, camToPlanetCenter);
+                float heightSqrCam = dot(_CameraPos.xyz, _CameraPos.xyz);
+                float effectiveRadius = _PlanetRadius + _CullingRadius;
                 
-                bool IsCamLowerThanObj = pow(fullRadius, 2) >= camHeightSqr; //r1.w
-                bool IsCamHigherThanObj = IsCamLowerThanObj == false; //r2.y
-                bool IsObjAboveCam = 0 >= angleDownBounds;
-                bool IsAboveViewMaybe = IsObjAboveCam || fullRadius < (angleDownBounds - distCamToBounds); //r2.z
-                bool IsAboveCamPlane = IsAboveViewMaybe || IsCamHigherThanObj; //r2.w
+                bool IsCamLowerThanObj = pow(effectiveRadius, 2) >= heightSqrCam;
+                bool IsCamHigherThanObj = IsCamLowerThanObj == false;
+
+                bool IsObjInSameHemisphere = angleCamPlanetToBounds <= 0; 
+                bool IsSameHemiOrCloseEnough = IsObjInSameHemisphere || effectiveRadius < (angleCamPlanetToBounds - distCamToBounds);
+                bool IsNearbyOrBelowCam = IsSameHemiOrCloseEnough || IsCamHigherThanObj;
                 
-                float unkR1Y = fullRadius * fullRadius - (camHeightSqr - angleDownBounds * angleDownBounds); //r1.y
-                bool IsBelowCamPlaneMaybe = unkR1Y < 0; //r1.z
-                bool IsOutsideOfCamPlane = IsBelowCamPlaneMaybe || IsAboveCamPlane;
-                bool unkR0W = distCamToBounds < angleDownBounds - sqrt(unkR1Y); //r0.w
+                float lengthSqrBtwnRadius = pow(effectiveRadius, 2) - (heightSqrCam - pow(angleCamPlanetToBounds, 2));
+                bool IsInsideVisibleRadius = lengthSqrBtwnRadius < 0;
+                bool IsVisibleOrNearbyOrBelow = IsInsideVisibleRadius || IsNearbyOrBelowCam;
+                bool IsVeryClose = distCamToBounds < angleCamPlanetToBounds - sqrt(lengthSqrBtwnRadius);
                 
-                ShouldRender = IsCamLowerThanObj ? IsCamHigherThanObj : (IsAboveViewMaybe ? IsAboveCamPlane : (IsBelowCamPlaneMaybe ? IsOutsideOfCamPlane : unkR0W && (unkR0W || IsOutsideOfCamPlane)));
+                if (IsCamLowerThanObj)
+                {
+                    ShouldRender = IsCamHigherThanObj; // always false, since IsCamHigherThanObj is IsCamLowerThanObj == false?
+                }
+                else if (IsSameHemiOrCloseEnough)
+                {
+                    ShouldRender = IsNearbyOrBelowCam; // always true, since IsNearbyOrBelowCam is IsSameHemiOrCloseEnough || IsCamHigherThanObj?
+                }
+                else if (IsInsideVisibleRadius)
+                {
+                    ShouldRender = IsVisibleOrNearbyOrBelow; // always true since IsVisibleOrNearbyOrBelow includes IsInsideVisibleRadius in OR
+                }
+                else
+                {
+                    ShouldRender = IsVeryClose && (IsVeryClose || IsVisibleOrNearbyOrBelow);
+                }
             }
         }
     
         if (!ShouldRender)
             return;
     
-        float distSqrCamToPos = dot(pos - _CameraPos.xyz, pos - _CameraPos.xyz); //r0.x //this was a dot(x,x), right?
-        float distSqrLOD0 = _LOD_0_Dist * _LOD_0_Dist; //r0.y
+        float distSqrCamToPos = dot(pos - _CameraPos.xyz, pos - _CameraPos.xyz);
+        float distThresholdSqrLOD0 = _LOD_0_Dist * _LOD_0_Dist;
         
-        if (distSqrCamToPos < distSqrLOD0) {
+        if (distSqrCamToPos < distThresholdSqrLOD0) {
             _LOD_0_ID_Buffer.Append(vThreadID.x);
         }
     }

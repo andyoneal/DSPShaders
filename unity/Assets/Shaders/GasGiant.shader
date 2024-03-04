@@ -1,8 +1,8 @@
-Shader "Universe/GasGiant" {
+Shader "Universe/GasGiant REPLACE" {
 	Properties {
 		_Multiplier ("Multiplier", Float) = 1
-		_Color ("Color", Vector) = (1,1,1,1)
-		_FlowColor ("Flow Color", Vector) = (1,1,1,1)
+		_Color ("Color", Color) = (1,1,1,1)
+		_FlowColor ("Flow Color", Color) = (1,1,1,1)
 		_ColorRamp ("Color Ramp", 2D) = "white" {}
 		_FlowRamp ("Flow Ramp", 2D) = "white" {}
 		_SpeedRamp ("Speed Ramp", 2D) = "white" {}
@@ -18,9 +18,9 @@ Shader "Universe/GasGiant" {
 		_DistortSettings2 ("Distort Settings 2", Vector) = (50,13,10,19)
 		_SunDir ("Sun Dir", Vector) = (0,1,0,0)
 		_Rotation ("Rotation ", Vector) = (0,0,0,1)
-		_AmbientColor0 ("Ambient Color 0", Vector) = (0,0,0,0)
-		_AmbientColor1 ("Ambient Color 1", Vector) = (0,0,0,0)
-		_AmbientColor2 ("Ambient Color 2", Vector) = (0,0,0,0)
+		_AmbientColor0 ("Ambient Color 0", Color) = (0,0,0,0)
+		_AmbientColor1 ("Ambient Color 1", Color) = (0,0,0,0)
+		_AmbientColor2 ("Ambient Color 2", Color) = (0,0,0,0)
 		_Distance ("Distance", Float) = 0
 		_Radius ("Radius", Float) = 800
 	}
@@ -51,7 +51,7 @@ Shader "Universe/GasGiant" {
                 float3 upDir : TEXCOORD3;
                 float2 uv  : TEXCOORD4;
                 float3 indirectLight : TEXCOORD5;
-                float4 unused1 : TEXCOORD7;
+                UNITY_SHADOW_COORDS(7)
                 float4 unused2 : TEXCOORD8;
 			};
 			
@@ -59,42 +59,6 @@ Shader "Universe/GasGiant" {
 			{
 				float4 sv_target : SV_Target0;
 			};
-
-			float SampleNoise(float tileX, float tileY, float animStep, float animOffset, float speedRamp, float verticalPct, float longHemi, float longHemiInv)
-            {
-                float tileStep = (frac(0.5 * animStep + animOffset) * 0.4 - 0.2) * speedRamp; //r4.w
-                float2 noiseUV;
-                
-                noiseUV.x = tileX + tileStep;
-                noiseUV.y = tileY;
-                float noise0 = tex2D(_NoiseTex, noiseUV).x; //r5.y
-                
-                noiseUV.x = tileX * 2.0 + tileStep;
-                noiseUV.y = tileY * 1.3 - (0.12 * animStep);
-                float noise1 = tex2D(_NoiseTex, noiseUV).x; //r5.z
-                
-                noiseUV.x = tileX * 0.8 + tileStep;
-                noiseUV.y = tileY * 2.0 + (0.6 * animStep);
-                float noise2 = tex2D(_NoiseTex, rnoiseUV).x; // r5.z
-                
-                noiseUV.x = tileX_2 + tileStep;
-                noiseUV.y = tileY_2;
-                float noise3 = tex2D(_NoiseTex, noiseUV).x; //r5.z
-                
-                noiseUV.x = tileX_2 * 2.0 + tileStep;
-                noiseUV.y = tileY_2 * 1.3 - (0.12 * animStep);
-                float noise4 = tex2D(_NoiseTex, noiseUV).x; //r4.w
-                
-                noiseUV.x = tileX_2 * 0.8 + tileStep;
-                noiseUV.y = tileY_2 * 2.0 - (0.6 * animStep);
-                float noise5 = tex2D(_NoiseTex, noiseUV).x; //r0.x
-                
-                float noise012 = noise0 + noise1 * 0.6 + 0.15 * noise2; //r5.y
-                float noise345 = noise3 + noise4 * 0.6 + 0.15 * noise5; //r0.x
-                
-                float oneMinusAsinY = 1.0 - asin(verticalPct); // r1.y
-                return oneMinusAsinY * (noise012 * longHemi + noise345 * longHemiInv); //r0.x
-            }
 
 			float4 _LightColor0;
 			float _Multiplier;
@@ -119,7 +83,42 @@ Shader "Universe/GasGiant" {
 			sampler2D _SpeedRamp;
 			sampler2D _NoiseTex;
 			sampler2D _ColorRamp;
-			
+
+			float SampleNoise(float tileX, float tileY, float tileX_2, float tileY_2, float animStep, float animOffset, float speedRamp, float verticalPct, float longHemi, float longHemiInv)
+            {
+                float tileStep = (frac(0.5 * animStep + animOffset) * 0.4 - 0.2) * speedRamp; //r4.w
+                float2 noiseUV;
+                
+                noiseUV.x = tileX + tileStep;
+                noiseUV.y = tileY;
+                float noise0 = tex2D(_NoiseTex, noiseUV).x; //r5.y
+                
+                noiseUV.x = tileX * 2.0 + tileStep;
+                noiseUV.y = tileY * 1.3 - (0.12 * animStep);
+                float noise1 = tex2D(_NoiseTex, noiseUV).x; //r5.z
+                
+                noiseUV.x = tileX * 0.8 + tileStep;
+                noiseUV.y = tileY * 2.0 + (0.6 * animStep);
+                float noise2 = tex2D(_NoiseTex, noiseUV).x; // r5.z
+                
+                noiseUV.x = tileX_2 + tileStep;
+                noiseUV.y = tileY_2;
+                float noise3 = tex2D(_NoiseTex, noiseUV).x; //r5.z
+                
+                noiseUV.x = tileX_2 * 2.0 + tileStep;
+                noiseUV.y = tileY_2 * 1.3 - (0.12 * animStep);
+                float noise4 = tex2D(_NoiseTex, noiseUV).x; //r4.w
+                
+                noiseUV.x = tileX_2 * 0.8 + tileStep;
+                noiseUV.y = tileY_2 * 2.0 - (0.6 * animStep);
+                float noise5 = tex2D(_NoiseTex, noiseUV).x; //r0.x
+                
+                float noise012 = noise0 + noise1 * 0.6 + 0.15 * noise2; //r5.y
+                float noise345 = noise3 + noise4 * 0.6 + 0.15 * noise5; //r0.x
+                
+                float oneMinusAsinY = 1.0 - asin(verticalPct); // r1.y
+                return oneMinusAsinY * (noise012 * longHemi + noise345 * longHemiInv); //r0.x
+            }
 
 			v2f vert(appdata_full v)
 			{
@@ -147,16 +146,17 @@ Shader "Universe/GasGiant" {
                 
                 o.upDir.xyz = normalize(v.vertex.xyz);
                 o.uv.xy = v.texcoord.xy;
-                o.indirectLight.xyz = ShadeSH9(float4(worldNormal, 1.0))
-                
-                o.unused1.xyzw = float4(0,0,0,0);
+                o.indirectLight.xyz = ShadeSH9(float4(worldNormal, 1.0));
+				UNITY_TRANSFER_SHADOW(o, float(0,0))
                 o.unused2.xyzw = float4(0,0,0,0);
                 
                 return o;
 			}
 
-			fout frag(v2f inp)
+			fout frag(v2f i)
 			{
+				fout o;
+				
                 float longitude = atan2(i.upDir.z, i.upDir.x); //r0.y
     
                 float longNorm = frac(UNITY_INV_TWO_PI * longitude); //r0.z
@@ -197,17 +197,17 @@ Shader "Universe/GasGiant" {
                 
                 float longHemi = 1.0 - 2.0 * abs(0.5 - longNorm); //r1.z
                 float longHemiInv = 1.0 - 2.0 * abs(0.5 - longNormInv); //r1.w
-                float noiseComp1 = SampleNoise(tileX, tileY, animStep, 0.0, speedRamp, verticalPct, longHemi, longHemiInv);
-                float noiseComp2 = SampleNoise(tileX, tileY, animStep, 0.5, speedRamp, verticalPct, longHemi, longHemiInv);
+                float noiseComp1 = SampleNoise(tileX, tileY, tileX_2, tileY_2, animStep, 0.0, speedRamp, verticalPct, longHemi, longHemiInv);
+                float noiseComp2 = SampleNoise(tileX, tileY, tileX_2, tileY_2, animStep, 0.5, speedRamp, verticalPct, longHemi, longHemiInv);
                 
                 float noiseAnim = 1.0 - 2.0 * abs(0.5 - frac(0.5 * animStep)); //r3.y
                 float noiseDistort = 1.0 - 2.0 * abs(0.5 - distortX_2); //r3.w
                 float noise = noiseAnim * noiseComp1 + noiseDistort * noiseComp2; //r0.x
                 
-                if (_Distort > 0f)
+                if (_Distort > 0)
                 {
                     float distort0 = (i.upDir.y * 0.3 + i.upDir.x) * _DistortSettings1.z + _DistortSettings1.w * 0.2 * animStep; //r0.y
-                    flost distort1 = i.upDir.y                     * _DistortSettings2.x + _DistortSettings2.y * sin(0.2 * animStep); //r0.w
+                    float distort1 = i.upDir.y                     * _DistortSettings2.x + _DistortSettings2.y * sin(0.2 * animStep); //r0.w
                     float distort2 = (i.upDir.y * 0.7 + i.upDir.z) * _DistortSettings2.z + _DistortSettings2.w * 0.2 * animStep; //r0.z
                     float distort = sin(distort0) * sin(distort1) * sin(distort2); //r0.y
                     
@@ -218,10 +218,10 @@ Shader "Universe/GasGiant" {
                 float flowAlpha = _FlowColor.w * saturate(lerp(_NoiseThres, 1.0, noise)); //r0.x
                 color = _Multiplier * lerp(color, flowColor.xyz * _Color.xyz, flowAlpha); //r0.xyz
                 
-                float3 worldPos = float3(inp.TBN0.w, inp.TBN1.w, inp.TBN2.w);
+                float3 worldPos = float3(i.TBNW0.w, i.TBNW1.w, i.TBNW2.w);
                 UNITY_LIGHT_ATTENUATION(atten, i, worldPos); //r0.w
                 
-                float3 worldNormal = normalize(float3(inp.TBN0.z, inp.TBN1.z, inp.TBN2.z)); //r1.xyz
+                float3 worldNormal = normalize(float3(i.TBNW0.z, i.TBNW1.z, i.TBNW2.z)); //r1.xyz
                 float3 NdotL = dot(worldNormal, _SunDir.xyz); //r1.x
                 float3 NdotL_clamped = max(0, NdotL);
                 NdotL_clamped = longHemiInv > 0.5 ? 0.5 * (log(2.0 * NdotL_clamped) + 1) : NdotL_clamped; // should this be longHemiInv?
@@ -233,10 +233,10 @@ Shader "Universe/GasGiant" {
                 float3 ambientColor2 = _AmbientColor2.xyz * lod2;
                 float3 ambientColor = calculateAmbientColor(NdotL, ambientColor0, ambientColor1, ambientColor2); //r2.xyw
                 
-                atten = 0.8 * lerp(atten, 1, saturate(0.15 * NdotL);
+                atten = 0.8 * lerp(atten, 1, saturate(0.15 * NdotL));
                 float3 sunLight = _LightColor0.xyz * NdotL_clamped * atten;
                 
-                o.sv_target.xyz = color * (i.indirectLight.xyz + sunLight + ambientLight);
+                o.sv_target.xyz = color * (i.indirectLight.xyz + sunLight + ambientColor);
                 o.sv_target.w = 1;
                 
                 return o;

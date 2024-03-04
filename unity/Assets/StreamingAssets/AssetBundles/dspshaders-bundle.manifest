@@ -1,9 +1,9 @@
 ManifestFileVersion: 0
-CRC: 2501766306
+CRC: 3900556639
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 71fe9a336553ce312f5f3ea0c6b1cb9e
+    Hash: d72a9cc39632eeb618f19375a988af11
   TypeTreeHash:
     serializedVersion: 2
     Hash: 44d87ff5fe9d9e8c6f146a352e3e72cf
@@ -16,12 +16,13 @@ ClassTypes:
 Assets:
 - Assets/Shaders/WIP/GeoObject Instancing.shader
 - Assets/Shaders/WIP/PBR Standard Vein Crystal.shader
-- Assets/Shaders/LODCulling.compute
 - Assets/Shaders/WIP/PBR Standard Chemical Glass MK2.shader
 - Assets/Shaders/Planet ATField Shape.shader
 - Assets/Shaders/WIP/Sun.shader
+- Assets/Shaders/LODCulling.compute
 - Assets/Shaders/WIP/Unlit DFRanger Effect.shader
 - Assets/Shaders/WIP/Star Body.shader
+- Assets/Shaders/GasGiant.shader
 - Assets/Shaders/PBR Standard Vein Stone.shader
 - Assets/Shaders/Cargo Instancing.shader
 - Assets/Shaders/PBR Standard Vein Metal.shader

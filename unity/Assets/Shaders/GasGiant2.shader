@@ -2,6 +2,7 @@ Shader "Universe/GasGiant REPLACE" {
     Properties {
         _Multiplier ("Multiplier", Float) = 1
         _Color ("Color", Color) = (1,1,1,1)
+        _RimColor ("Color", Vector) = (1,1,1,1)
         _FlowColor ("Flow Color", Color) = (1,1,1,1)
         _ColorRamp ("Color Ramp", 2D) = "white" {}
         _FlowRamp ("Flow Ramp", 2D) = "white" {}
@@ -48,7 +49,7 @@ Shader "Universe/GasGiant REPLACE" {
                 float4 TBNW0 : TEXCOORD0;
                 float4 TBNW1 : TEXCOORD1;
                 float4 TBNW2 : TEXCOORD2;
-                float3 upDir : TEXCOORD3;
+                float4 upDir_NdotV : TEXCOORD3;
                 float2 uv  : TEXCOORD4;
                 float3 indirectLight : TEXCOORD5;
                 UNITY_SHADOW_COORDS(7)
@@ -63,6 +64,7 @@ Shader "Universe/GasGiant REPLACE" {
             float4 _LightColor0;
             float _Multiplier;
             float4 _Color;
+            float4 _RimColor;
             float4 _FlowColor;
             float _NoiseThres;
             float _Speed;
@@ -143,7 +145,13 @@ Shader "Universe/GasGiant REPLACE" {
                 o.TBNW1.z = worldNormal.y;
                 o.TBNW2.z = worldNormal.z;
                 
-                o.upDir.xyz = normalize(v.vertex.xyz);
+                o.upDir_NdotV.xyz = normalize(v.vertex.xyz);
+                
+                float3 viewDir = normalize(_WorldSpaceCameraPos - worldPos.xyz); //r0.xyz
+                float3 normalDir = UnityObjectToWorldDir(v.normal.xyz); //r1.xyz
+                float NdotV = dot(viewDir, normalDir); //r0.x
+                o.upDir_NdotV.w = abs(NdotV);
+                
                 o.uv.xy = v.texcoord.xy;
                 o.indirectLight.xyz = ShadeSH9(float4(worldNormal, 1.0));
                 UNITY_TRANSFER_SHADOW(o, float(0,0))
@@ -158,11 +166,11 @@ Shader "Universe/GasGiant REPLACE" {
                 
                 float animStep = _Time.x * _Speed; //r0.x
                 
-                float longitude = atan2(i.upDir.z, i.upDir.x); //r0.y
+                float longitude = atan2(i.upDir_NdotV.z, i.upDir_NdotV.x); //r0.y
                 float normLong = frac(UNITY_INV_TWO_PI * longitude); //r0.z
                 float normLongInv = frac(UNITY_INV_TWO_PI * longitude + 0.5); //r0.y
                 
-                float verticalPct = normalize(i.upDir.xyz).y; // r0.w
+                float verticalPct = normalize(i.upDir_NdotV.xyz).y; // r0.w
                 float polar = acos(verticalPct); //r1.x
                 float latitude = UNITY_HALF_PI - polar; //r0.w
                 // angle from -pi/2 to pi/2 with 0=equator and pi/2=north pole
@@ -220,17 +228,20 @@ Shader "Universe/GasGiant REPLACE" {
                 
                 if (_Distort > 0)
                 {
-                    float distort0 = (i.upDir.y * 0.3 + i.upDir.x) * _DistortSettings1.z + _DistortSettings1.w * 0.2 * animStep; //r0.y
-                    float distort1 = i.upDir.y                     * _DistortSettings2.x + _DistortSettings2.y * sin(0.2 * animStep); //r0.w
-                    float distort2 = (i.upDir.y * 0.7 + i.upDir.z) * _DistortSettings2.z + _DistortSettings2.w * 0.2 * animStep; //r0.z
+                    float distort0 = (i.upDir_NdotV.y * 0.3 + i.upDir_NdotV.x) * _DistortSettings1.z + _DistortSettings1.w * 0.2 * animStep; //r0.y
+                    float distort1 = i.upDir_NdotV.y                     * _DistortSettings2.x + _DistortSettings2.y * sin(0.2 * animStep); //r0.w
+                    float distort2 = (i.upDir_NdotV.y * 0.7 + i.upDir_NdotV.z) * _DistortSettings2.z + _DistortSettings2.w * 0.2 * animStep; //r0.z
                     float distort = sin(distort0) * sin(distort1) * sin(distort2); //r0.y
                     
                     rampUV.y = distortAmt * distort * (noise - 0.5) * 10 + rampUV.y;
                 }
+
+                float3 color = tex2D(_ColorRamp, r2.zw);
+                float NdotV = i.upDir_NdotV.w;
+                color = color * lerp(_Color.xyz, _RimColor.xyz, pow(1.0 - NdotV, 2.0));
                 
-                float3 color = _Color.xyz * tex2D(_ColorRamp, rampUV).xyz; //r0.yzw
-                float flowAlpha = _FlowColor.w * saturate(noise * (_NoiseThres + 1.0) - _NoiseThres); //r0.x
-                color = _Multiplier * lerp(color, flowColor.xyz * _Color.xyz, flowAlpha); //r0.xyz
+                float flowAlpha = _FlowColor.w * saturate(noise * (_NoiseThres + 1.0) - _NoiseThres);
+                color = _Multiplier * lerp(color, flowColor.xyz * _Color.xyz, flowAlpha);
                 
                 float3 worldPos = float3(i.TBNW0.w, i.TBNW1.w, i.TBNW2.w);
                 UNITY_LIGHT_ATTENUATION(atten, i, worldPos); //r0.w

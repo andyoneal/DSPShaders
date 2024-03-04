@@ -190,7 +190,7 @@ Shader "Universe/GasGiant REPLACE" {
                 rampUV.x = 0.5;
                 rampUV.y = normLat;
                 
-                float3 flowColor = tex2D(_FlowRamp, rampUV).xyz
+                float3 flowColor = tex2D(_FlowRamp, rampUV).xyz;
                 flowColor = flowColor * 2.0 * _FlowColor.xyz; //r4.xyz
                 
                 float speedRamp = tex2D(_SpeedRamp, rampUV).x; //r2.x 

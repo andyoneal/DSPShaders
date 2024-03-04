@@ -218,15 +218,19 @@ float3 calculateSunlightColor(float3 sunlightColor, float upDotL, float3 sunsetC
     return calculateSunlightColor(sunlightColor, upDotL, sunsetColor0, sunsetColor1, sunsetColor2, float3(0,0,0));
 }
 
-float3 calculateAmbientColor(float3 upDir, float3 lightDir, float3 ambientColor0, float3 ambientColor1, float3 ambientColor2) {
+float3 calculateAmbientColor(float UpdotL, float3 ambientColor0, float3 ambientColor1, float3 ambientColor2) {
     //UpdotL: position of star in the sky, relative to the object.
     //1 is noon
     //0 is sunrise/sunset
     //-1 is midnight
-    float UpdotL = dot(upDir, lightDir);
     
     //starting when the star is below the horizon, lerp from ambient2 to ambient1 to ambient0 at noon, then back down again
     float3 ambientTwilight = lerp(ambientColor2, ambientColor1, saturate(UpdotL * 3.0 + 1)); //-33% to 0%
     float3 ambientLowSun = lerp(ambientColor1, ambientColor0, saturate(UpdotL * 3.0)); // 0% - 33%
     return UpdotL > 0 ? ambientLowSun : ambientTwilight;
+}
+
+float3 calculateAmbientColor(float3 upDir, float3 lightDir, float3 ambientColor0, float3 ambientColor1, float3 ambientColor2) {
+    float UpdotL = dot(upDir, lightDir);
+    return calculateAmbientColor(UpdotL, ambientColor0, ambientColor1, ambientColor2);
 }

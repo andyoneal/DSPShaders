@@ -31,7 +31,7 @@ Shader "VF Shaders/Forward/Planet Thumb New REPLACE" {
             #pragma enable_d3d11_debug_symbols
             
             #include "UnityCG.cginc"
-            #include "CGIncludes/DSPCommon.cginc"
+            #include "../CGIncludes/DSPCommon.cginc"
             
             struct v2f
             {
@@ -79,7 +79,7 @@ Shader "VF Shaders/Forward/Planet Thumb New REPLACE" {
                 return o;
             }
 
-            fout frag(v2f inp)
+            fout frag(v2f i)
             {
                 fout o;
 

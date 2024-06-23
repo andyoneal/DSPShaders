@@ -34,7 +34,7 @@ Shader "Universe/Starmap/Planet Orbit REPLACE" {
             #pragma fragment frag
             #pragma target 5.0
             #pragma enable_d3d11_debug_symbols
-            #include "CGIncludes/DSPCommon.cginc"
+            #include "../CGIncludes/DSPCommon.cginc"
             
             #include "UnityCG.cginc"
             
@@ -86,7 +86,7 @@ Shader "Universe/Starmap/Planet Orbit REPLACE" {
                 return o;
             }
 
-            fout frag(v2f inp)
+            fout frag(v2f i)
             {
                 fout o;
                 float3 eyeVec = normalize(i.camToPos.xyz); //r0.xyz

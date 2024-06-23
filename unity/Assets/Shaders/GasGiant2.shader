@@ -1,4 +1,4 @@
-Shader "Universe/GasGiant REPLACE" {
+Shader "Universe/GasGiant2 REPLACE" {
     Properties {
         _Multiplier ("Multiplier", Float) = 1
         _Color ("Color", Color) = (1,1,1,1)
@@ -236,7 +236,7 @@ Shader "Universe/GasGiant REPLACE" {
                     rampUV.y = distortAmt * distort * (noise - 0.5) * 10 + rampUV.y;
                 }
 
-                float3 color = tex2D(_ColorRamp, r2.zw);
+                float3 color = tex2D(_ColorRamp, rampUV);
                 float NdotV = i.upDir_NdotV.w;
                 color = color * lerp(_Color.xyz, _RimColor.xyz, pow(1.0 - NdotV, 2.0));
                 

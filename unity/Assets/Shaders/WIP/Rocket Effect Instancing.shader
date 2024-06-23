@@ -34,14 +34,14 @@ Shader "VF Shaders/Forward/Rocket Effect Instancing REPLACE" {
             
             #include "UnityCG.cginc"
             #include "AutoLight.cginc"
-            #include "CGIncludes/DSPCommon.cginc"
+            #include "../CGIncludes/DSPCommon.cginc"
             
             struct DysonRocketRenderingData
             {
                 uint id;
-                Vector3 rPos;
-                Quaternion rRot;
-                Vector3 rVel;
+                float3 rPos;
+                float4 rRot;
+                float3 rVel;
                 float t;
             };
             
@@ -69,6 +69,7 @@ Shader "VF Shaders/Forward/Rocket Effect Instancing REPLACE" {
             float _ZMin;
             float _ZMax;
             int _Global_DS_RenderPlace;
+            float _Global_Dimlight_Gain;
             
             sampler2D _CameraDepthTexture;
             sampler2D _MainTex;
@@ -77,6 +78,7 @@ Shader "VF Shaders/Forward/Rocket Effect Instancing REPLACE" {
             sampler2D _EmissionTex;
             sampler2D _EmissionJitterTex;
             sampler2D _WarpMap;
+            sampler2D _NoiseMap;
             
             v2f vert(appdata_full v, uint instanceID : SV_InstanceID)
             {
@@ -96,7 +98,7 @@ Shader "VF Shaders/Forward/Rocket Effect Instancing REPLACE" {
                     float2 noiseUV;
                     noiseUV.x = 2.0 * _Time.y;
                     noiseUV.y = (1.0/256) - rPos.z / 128.0;
-                    float noise = _NoiseMap.SampleLevel(s0_s, noiseUV.xy, 0).x; //r3.z
+                    float noise = tex2Dlod(_NoiseMap, float4(noiseUV.xy, 0, 0)).x; //r3.z
                     noise = noise - 0.5;
                     
                     // == 1
@@ -119,10 +121,12 @@ Shader "VF Shaders/Forward/Rocket Effect Instancing REPLACE" {
                             float3 viewDir = normalize(posToCam); //r5.xyz
                             
                             float3 yAxis; //r8.xyz
+                            float4 r6;
+                            float4 r7;
                             r6.yzw = rRot.yzy + rRot.yzy;
                             r7.xyz = r6.yzw * rRot.yyw;
                             yAxis.x = -rRot.x * r6.z - r7.z;
-                            yAxis.y = r1.w * (2.0 * rRot.x) - r7.y;
+                            yAxis.y = rRot.w * (2.0 * rRot.x) - r7.y;
                             yAxis.z = (rRot.x * (2.0 * rRot.x) + r7.x) - 1.0;
                             
                             effectTransform.xy = float2(12, 6) * v.vertex.xy * camDistScaler;
@@ -156,10 +160,11 @@ Shader "VF Shaders/Forward/Rocket Effect Instancing REPLACE" {
                         }
                     }
                 }
-                
+
+                float3 camToPos = rPos.xyz - _WorldSpaceCameraPos.xyz;
                 float distCamToPos = distance(_WorldSpaceCameraPos.xyz, rPos.xyz); //r0.w
-                r0.xyz = distCamToPos > 10000.0 ? camToPos.xyz * ((10000.0 * r1.z) / distCamToPos) : camToPos.xyz;
-                float3 scaledRPos = _WorldSpaceCameraPos.xyz + r0.xyz; //r0.xyz
+                camToPos = distCamToPos > 10000.0 ? (10000.0 * (log(distCamToPos / 10000.0) + 1.0) / distCamToPos) * camToPos : camToPos;
+                float3 scaledRPos = _WorldSpaceCameraPos.xyz + camToPos.xyz; //r0.xyz
                 
                 localPos = rotate_vector_fast(localPos, rRot); //r6.xyz
                 float4 worldPos = float4(localPos + scaledRPos, 1.0); // r1.xyz
@@ -176,8 +181,8 @@ Shader "VF Shaders/Forward/Rocket Effect Instancing REPLACE" {
                 // camUpDir.z = unity_MatrixV[2].y;
                 // camUpDir = normalize(camUpDir); //r2.xyz
                 
-                worldPos = worldPos + camRightDir * effectTransform.x + camUpDir * effectTransform.y; //r0.xyz
-                worldPos = mul(unity_ObjectToWorld, float4(worldPos.xyz, 1); //r0.xyzw
+                worldPos.xyz = worldPos + camRightDir * effectTransform.x + camUpDir * effectTransform.y; //r0.xyz
+                worldPos = mul(unity_ObjectToWorld, float4(worldPos.xyz, 1)); //r0.xyzw
                 
                 float4 clipPos = mul(UNITY_MATRIX_VP, worldPos); //r1.xyzw
                 
@@ -199,7 +204,7 @@ Shader "VF Shaders/Forward/Rocket Effect Instancing REPLACE" {
                 return o;
             }
 
-            fout frag(v2f inp)
+            fout frag(v2f i)
             {
                 fout o;
                 
@@ -219,7 +224,7 @@ Shader "VF Shaders/Forward/Rocket Effect Instancing REPLACE" {
                 float fade_toggle = _ZMax < (sceneZ - i.screenPos.z) ? 1.0 : 0.0; //r1.x
                 fade_1 = fade == 0.0 ? fade_toggle : fade_1;
                 fade_2 = fade == 0.0 ? 1.0 : fade_2;
-                fade = fade_1 * r0.y; //r0.x
+                fade = fade_1 * fade_2; //r0.x
                 
                 float4 mainTex = tex2D(_MainTex, i.uv_uv.xy); //r2.xyzw
                 float4 effTex1 = tex2D(_EffectTex1, i.uv_uv.xy); //r3.xyzw
@@ -251,8 +256,7 @@ Shader "VF Shaders/Forward/Rocket Effect Instancing REPLACE" {
                 float2 warpUV;
                 warpUV.x = i.unk2.w;
                 warpUV.y = 0.5;
-                float4 warpMap = _WarpMap.SampleLevel(s5_s, warpUV, 0).xyzw; //r3.xyzw
-                
+                float4 warpMap = tex2Dbias(_WarpMap, float4(warpUV, 0, 0)); //r3.xyzw
                 
                 float4 finalColor = 2.6 * i.effSelect.zzzz * effTex2.xyzw * jitter
                                   + 0.8 * i.effSelect.xxxx * mainTex.xyzw
@@ -261,7 +265,7 @@ Shader "VF Shaders/Forward/Rocket Effect Instancing REPLACE" {
                 finalColor.xyz = saturate(5 * i.unk2.w) * (dot(finalColor.xyz, float3(0.36, 0.72, 0.12)) - finalColor.xyz * 1.2) + 1.2 * finalColor.xyz;
                 
                 o.sv_target.xyz = (exp2(log(10)/log(2) * warpMap.w) - 1.0) * warpMap.xyz * finalColor.xyz + finalColor.xyz;
-                o_sv_target.w = finalColor.w;
+                o.sv_target.w = finalColor.w;
                 
                 return o;
             }

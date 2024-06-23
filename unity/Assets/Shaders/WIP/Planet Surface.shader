@@ -409,7 +409,7 @@ Shader "VF Shaders/Forward/Planet Surface REPLACE" {
 
                 //calculateLightFromHeadlamp
                 // except need to add input for lightColor.
-                float3 headlampLight = calculateLightFromHeadlamp(_Global_PointLightPos, upDir, lightDir, worldNormal, 5.0, 20.0, 0.9, false); //r0.xyz
+                float3 headlampLight = calculateLightFromHeadlamp(_Global_PointLightPos, upDir, lightDir, worldNormal, 5.0, 20.0, 0.9, false, 1.0); //r0.xyz
 
                 // no light on gas planet? what is this.
                 // no light on other planets when on another planet or in space?

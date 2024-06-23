@@ -342,7 +342,7 @@ Shader "VF Shaders/Forward/PBR Standard Vein Stone REPLACE" {
                 ambientLightColor = ambientLightColor * pow(unclamped_nDotL * 0.35 + 1, 3); //r5.yzw
                 ambientLightColor = ambientLightColor * (_AmbientInc + 1);
                 
-                float3 headlampLight = calculateLightFromHeadlamp(_Global_PointLightPos, upDir, lightDir, worldNormal, 5.0, 20.0, false); //r2.xyz
+                float3 headlampLight = calculateLightFromHeadlamp(_Global_PointLightPos, upDir, lightDir, worldNormal, 5.0, 20.0, false, 1.0); //r2.xyz
                 
                 float3 headlampLightColor = nDotL * lightColor + headlampLight;
                 headlampLightColor = albedo * headlampLightColor; //r2.xyz

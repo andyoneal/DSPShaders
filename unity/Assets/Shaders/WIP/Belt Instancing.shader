@@ -26,7 +26,7 @@ Shader "VF Shaders/Batching/Belt Instancing REPLACE" {
             #pragma enable_d3d11_debug_symbols
             
             #include "UnityCG.cginc"
-            #include "CGIncludes/DSPCommon.cginc"
+            #include "../CGIncludes/DSPCommon.cginc"
             #include "AutoLight.cginc"
             
             struct BeltAnchor
@@ -354,7 +354,7 @@ Shader "VF Shaders/Batching/Belt Instancing REPLACE" {
             
             #include "UnityCG.cginc"
             #include "AutoLight.cginc"
-            #include "CGIncludes/DSPCommon.cginc"
+            #include "../CGIncludes/DSPCommon.cginc"
             
             struct BeltAnchor
             {

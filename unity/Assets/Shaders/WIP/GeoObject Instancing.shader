@@ -230,7 +230,7 @@ Shader "VF Shaders/Forward/GeoObject Instancing REPLACE"
                 ambientLightColor = ambientLightColor * albedo.xyz; //r2.xyz
 
                 float3 headlampLight =
-                    calculateLightFromHeadlamp(_Global_PointLightPos, i.upDir, lightDir, worldNormal, 5.0, 20.0, false); //r5.xyz
+                    calculateLightFromHeadlamp(_Global_PointLightPos, i.upDir, lightDir, worldNormal, 5.0, 20.0, false,1.0); //r5.xyz
 
                 float3 lightColor = sunlightColor * pow(1 - metallicLow, 0.6)
                     + headlampLight * (pow(1 - metallicLow, 0.6) * 0.2 + 0.8); //r13.xyz
@@ -240,7 +240,7 @@ Shader "VF Shaders/Forward/GeoObject Instancing REPLACE"
                 specularColor *= clamped_nDotL * (specularTerm + INV_TEN_PI); //r3.xyz
                 specularColor *= headlampLight + clamped_nDotL; //r3.xyz
 
-                float3 highlightLight = calculateLightFromHeadlamp(_Global_PointLightPos, i.upDir, lightDir, worldNormal, 20.0, 40.0, true);
+                float3 highlightLight = calculateLightFromHeadlamp(_Global_PointLightPos, i.upDir, lightDir, worldNormal, 20.0, 40.0, true, metal_smooth.y);
 
                 float3 scaledAlbedo = albedo.xyz * float3(0.5, 0.5, 0.5) + float3(0.5, 0.5, 0.5); //r2.xyz
                 specularColor = lerp(metallicLow, 1, albedo.r * 0.2) * (specularColor + scaledAlbedo * highlightLight.

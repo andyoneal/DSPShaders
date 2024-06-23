@@ -40,7 +40,7 @@ float SchlickFresnel_Approx(float F0, float vDotH)
     return F0 + (1 - F0) * exp2((-5.55473 * vDotH - 6.98316) * vDotH);
 }
 
-float3 calculateLightFromHeadlamp(float4 headlampPos, float3 upDir, float3 lightDir, float3 normal, float lightSize, float lightRadius, float brightness, bool isReflected) {
+float3 calculateLightFromHeadlamp(float4 headlampPos, float3 upDir, float3 lightDir, float3 normal, float lightSize, float lightRadius, float brightness, bool isReflected, float smoothness) {
     bool isHeadlampOn = headlampPos.w >= 0.5;
     if (!isHeadlampOn) return float3(0, 0, 0);
     
@@ -61,8 +61,8 @@ float3 calculateLightFromHeadlamp(float4 headlampPos, float3 upDir, float3 light
     return distToLight < 0.001 ?  nightLight : attenuation * lightAngle * nightLight; //r0.yzw
 }
 
-float3 calculateLightFromHeadlamp(float4 headlampPos, float3 upDir, float3 lightDir, float3 normal, float lightSize, float lightRadius, bool isReflected) {
-    return calculateLightFromHeadlamp(headlampPos, upDir, lightDir, worldNormal, lightSize, lightRadius, 1.0, isReflected);
+float3 calculateLightFromHeadlamp(float4 headlampPos, float3 upDir, float3 lightDir, float3 normal, float lightSize, float lightRadius, bool isReflected, float smoothness) {
+    return calculateLightFromHeadlamp(headlampPos, upDir, lightDir, normal, lightSize, lightRadius, 1.0, isReflected, smoothness);
 }
 
 float distributionGGX(float roughness, float nDotH) {

@@ -40,7 +40,7 @@ Shader "VF Shaders/Forward/Rocket Instancing REPLACE" {
 			
 			#include "UnityCG.cginc"
 			#include "AutoLight.cginc"
-            #include "CGIncludes/DSPCommon.cginc"
+            #include "../CGIncludes/DSPCommon.cginc"
 
 			struct DysonRocketRenderingData
             {
@@ -95,7 +95,6 @@ Shader "VF Shaders/Forward/Rocket Instancing REPLACE" {
 			sampler2D _MS_Tex;
 			sampler2D _NormalTex;
 			sampler2D _EmissionTex;
-			samplerCUBE _Global_PGI;
 			
 			v2f vert(appdata_full v, uint instanceID : SV_InstanceID)
 			{
@@ -113,6 +112,7 @@ Shader "VF Shaders/Forward/Rocket Instancing REPLACE" {
 			    float3 worldPos = rotate_vector_fast(localPos, rRot) + rPos; //r5.xyz
 
                 float3 camToPos = worldPos - _WorldSpaceCameraPos; //r0.xyz
+				float distCamToPos = length(camToPos);
                 float distScale = 10000 * (log(length(camToPos) / 10000) + 1) / length(camToPos); //r1.y
 			    worldPos = isStarOrDysonMap || distRPosToCam > 6000.0 || distCamToPos <= 10000.0 ? worldPos : camToPos * distScale + _WorldSpaceCameraPos; //r5.xyz
 			    
@@ -149,19 +149,21 @@ Shader "VF Shaders/Forward/Rocket Instancing REPLACE" {
 			    
 			    o.indirectLight = ShadeSH9(float4(worldNormal, 1.0));
 			    UNITY_TRANSFER_SHADOW(o, float(0,0))
-                o9.xyzw = float4(0,0,0,0);
-
+                o.unk.xyzw = float4(0,0,0,0);
+				
                 return o;
 			}
 
 			fout frag(v2f i)
 			{
+				fout o;
+				
                 float id = i.uv_lod_id.w;
                 if (id < 0.5)
                     discard;
 
-                float uv = uv_lod_id.xy;
-                float3 mstex = tex2D(_MS_TEX, uv).xyw; //r0.xyz
+                float2 uv = i.uv_lod_id.xy;
+                float3 mstex = tex2D(_MS_Tex, uv).xyw; //r0.xyz
                 
                 if (mstex.y < _AlphaClip - 0.001)
                     discard;
@@ -198,15 +200,15 @@ Shader "VF Shaders/Forward/Rocket Instancing REPLACE" {
                 UNITY_LIGHT_ATTENUATION(atten, i, worldPos); // r0.w
 
                 float3 worldNormal;
-                worldNormal.x = dot(TBNW0.xyz, normal.xyz);
-                worldNormal.y = dot(TBNW1.xyz, normal.xyz);
-                worldNormal.z = dot(TBNW2.xyz, normal.xyz);
-                float3 worldNormal = normalize(worldNormal.xyz); //r2.xyz
-
+                worldNormal.x = dot(i.TBNW0.xyz, normal.xyz);
+                worldNormal.y = dot(i.TBNW1.xyz, normal.xyz);
+                worldNormal.z = dot(i.TBNW2.xyz, normal.xyz);
+                worldNormal = normalize(worldNormal.xyz); //r2.xyz
+				
                 float metallicLow = metallic * 0.85 + 0.149; //r6.y
                 float metallicHigh = metallicLow + 0.5; //r6.x
                 float perceptualRoughness = 1.0 - smoothness * 0.97; //r0.x
-                float halfDir = normalize(viewDir.xyz + _WorldSpaceLightPos0.xyz); //r7.xyz
+                float3 halfDir = normalize(viewDir.xyz + _WorldSpaceLightPos0.xyz); //r7.xyz
                 float roughness = pow(perceptualRoughness, 2.0); //r0.z
 
                 float nDotL = dot(worldNormal.xyz, _WorldSpaceLightPos0.xyz); //r2.w
@@ -229,9 +231,9 @@ Shader "VF Shaders/Forward/Rocket Instancing REPLACE" {
                 float3 ambientColor = calculateAmbientColor(upDotL, _Global_AmbientColor1.xyz, _Global_AmbientColor1.xyz, _Global_AmbientColor1.xyz); //r10.xyw
                 float ambientLight = ambientColor * saturate(nDotUp * 0.3 + 0.7) * pow(nDotL * 0.35 + 1.0, 3.0); //r11.xyz
 
-                float3 nightLightOne = calculateLightFromHeadlamp(_Global_PointLightPos, upDir, _WorldSpaceLightPos0.xyz, worldNormal, 5.0, 20.0, false); //r2.xyz
+                float3 nightLightOne = calculateLightFromHeadlamp(_Global_PointLightPos, upDir, _WorldSpaceLightPos0.xyz, worldNormal, 5.0, 20.0, false, smoothness); //r2.xyz
                 float3 reflectDir = reflect(-viewDir, worldNormal); //r8.xyz
-                float3 nightLightTwo = calculateLightFromHeadlamp(_Global_PointLightPos, upDir, _WorldSpaceLightPos0.xyz, reflectDir, 20.0, 40.0, true); //r0.yzw
+                float3 nightLightTwo = calculateLightFromHeadlamp(_Global_PointLightPos, upDir, _WorldSpaceLightPos0.xyz, reflectDir, 20.0, 40.0, true, smoothness); //r0.yzw
                 
                 float glossiness = 1.0 - metallicLow;
                 float3 specularLight  = (nDotL_clamped + nightLightOne) * sunlightColor * specularColor * lerp(float3(1,1,1), albedo.xyz, glossiness) * (specularTerm + 0.0318309888); //r5.xyz
@@ -278,7 +280,7 @@ Shader "VF Shaders/Forward/Rocket Instancing REPLACE" {
             
             #include "UnityCG.cginc"
             #include "AutoLight.cginc"
-            #include "CGIncludes/DSPCommon.cginc"
+            #include "../CGIncludes/DSPCommon.cginc"
 
 			struct DysonRocketRenderingData
             {
@@ -291,7 +293,7 @@ Shader "VF Shaders/Forward/Rocket Instancing REPLACE" {
 			
 			struct v2f
 			{
-				float4 position : SV_POSITION0;
+				float4 pos : SV_POSITION0;
 				float4 uv_lod_id : TEXCOORD1;
 				float3 upDir : TEXCOORD2;
 				float3 t : TEXCOORD3;
@@ -305,11 +307,11 @@ Shader "VF Shaders/Forward/Rocket Instancing REPLACE" {
 			StructuredBuffer<DysonRocketRenderingData> _RocketBuffer;
 			
 			float _AlphaClip;
+			int _Global_DS_RenderPlace;
 
 			sampler2D _MS_Tex;
 			
-			// Keywords: SHADOWS_DEPTH
-			v2f vert(appdata_full v)
+			v2f vert(appdata_full v, uint instanceID : SV_InstanceID)
 			{
                 v2f o;
 
@@ -325,6 +327,7 @@ Shader "VF Shaders/Forward/Rocket Instancing REPLACE" {
                 float3 worldPos = rotate_vector_fast(localPos, rRot) + rPos; //r5.xyz
                 
                 float3 camToPos = worldPos - _WorldSpaceCameraPos; //r0.xyz
+				float distCamToPos = length(camToPos);
                 float distScale = 10000 * (log(length(camToPos) / 10000) + 1) / length(camToPos); //r1.y
                 worldPos = isStarOrDysonMap || distRPosToCam > 6000.0 || distCamToPos <= 10000.0 ? worldPos : camToPos * distScale + _WorldSpaceCameraPos; //r1.xyz
                 
@@ -347,14 +350,14 @@ Shader "VF Shaders/Forward/Rocket Instancing REPLACE" {
                 return o;
 			}
 			
-			fout frag(v2f inp)
+			fout frag(v2f i)
 			{
                 fout o;
 
-                if (i.uv_log_id.w) < 0.5)
+                if (i.uv_lod_id.w < 0.5)
                     discard;
                     
-                float alpha = tex2D(_MS_Tex, i.uv).y;
+                float alpha = tex2D(_MS_Tex, i.uv_lod_id.xy).y;
                 if (alpha < _AlphaClip - 0.001)
                     discard;
 

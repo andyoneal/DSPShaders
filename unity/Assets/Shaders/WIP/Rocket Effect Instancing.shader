@@ -97,14 +97,13 @@ Shader "VF Shaders/Forward/Rocket Effect Instancing REPLACE" {
                 {
                     float2 noiseUV;
                     noiseUV.x = 2.0 * _Time.y;
-                    noiseUV.y = (1.0/256) - rPos.z / 128.0;
-                    float noise = tex2Dlod(_NoiseMap, float4(noiseUV.xy, 0, 0)).x; //r3.z
-                    noise = noise - 0.5;
+                    noiseUV.y = 1.0/256.0 - rPos.z/128.0;
+                    float noise = tex2Dlod(_NoiseMap, float4(noiseUV, 0, 0)).x - 0.5; //r3.z
                     
                     // == 1
-                    if (effectSelector < 1.5) 
+                    if (effectSelector < 1.5)
                     {
-                        localPos.xyz = lerp(float3(0, 0, -5.5), v.vertex.xyz, noise * 0.15 + 1.05);
+                        localPos.xyz = lerp(float3(0, 0, -5.5), v.vertex.xyz, 0.15 * noise + 1.05);
                         effectSelOutput.y = 1;
                         effectSelOutput.w = 0;
                     }
@@ -119,44 +118,35 @@ Shader "VF Shaders/Forward/Rocket Effect Instancing REPLACE" {
                         if (effectSelector < 2.5)
                         {
                             float3 viewDir = normalize(posToCam); //r5.xyz
-                            
-                            float3 yAxis; //r8.xyz
-                            float4 r6;
-                            float4 r7;
-                            r6.yzw = rRot.yzy + rRot.yzy;
-                            r7.xyz = r6.yzw * rRot.yyw;
-                            yAxis.x = -rRot.x * r6.z - r7.z;
-                            yAxis.y = rRot.w * (2.0 * rRot.x) - r7.y;
-                            yAxis.z = (rRot.x * (2.0 * rRot.x) + r7.x) - 1.0;
+
+                            float4x4 rotMatrix = quaternionToMatrix(rRot);
+                            float3 yAxis = rotMatrix[2].xyz; //r8.xyz
                             
                             effectTransform.xy = float2(12, 6) * v.vertex.xy * camDistScaler;
-                            effectSelOutput.z = 0.8
-                                * (_Global_Dimlight_Gain + (1.0 / pow(camDistScaler, 0.2)))
-                                * (1.0 / (1.0 + max(0, distPosToCam / 120000 - 1.0)))
-                                * saturate(2.0 * (1.0 + dot(viewDir, yAxis))+ 0.3);
+                            
+                            effectSelOutput.z =
+                                0.8 * (_Global_Dimlight_Gain + (1.0 / pow(camDistScaler, 0.2)))
+                                * saturate(2.0 * (1.0 + dot(viewDir, yAxis)) + 0.3)
+                                / (1.0 + max(0, distPosToCam / 120000 - 1.0));
                             
                             localPos = float3(0, 0, 0.4 * v.vertex.z);
                         }
-                        // == 3+
-                        else
+                        else if (effectSelector > 4.5)
                         {
-                            // == 5+
-                            if (effectSelector > 4.5)
+                            
+                            effectSelOutput.x = 1.0 / pow(max(1.0, 0.5 * camDistScaler), 0.3);
+                            
+                            if (v.vertex.z < -4.95)
                             {
-                                effectSelOutput.x = 1.0 / pow(max(1.0, 0.5 * camDistScaler), 0.3);
-                                if (v.vertex.z < -4.95)
-                                {
-                                    float3 rVel = _RocketBuffer[instanceID].rVel; //r1.yzw
-                                    localPos.z = (4.95 + v.vertex.z) * (3.3 + length(rVel) * 0.023 + 0.7 * noise) - 4.95;
-                                }
-                                
-                                localPos.xy = localPos.z < -3.95 ? v.vertex.xy * max(1.0, 0.5 * camDistScaler) : v.vertex.xy;
+                                float3 rVel = _RocketBuffer[instanceID].rVel; //r1.yzw
+                                localPos.z = (4.95 + v.vertex.z) * (3.3 + length(rVel) * 0.023 + 0.7 * noise) - 4.95;
                             }
-                            // == 3 or 4
-                            else
-                            {
-                                effectSelOutput.x = 1;
-                            }
+                            
+                            localPos.xy = localPos.z < -3.95 ? v.vertex.xy * max(1.0, 0.5 * camDistScaler) : v.vertex.xy;
+                        }
+                        else //effectSelector == 3 or 4
+                        {
+                            effectSelOutput.x = 1;
                         }
                     }
                 }
@@ -170,16 +160,7 @@ Shader "VF Shaders/Forward/Rocket Effect Instancing REPLACE" {
                 float4 worldPos = float4(localPos + scaledRPos, 1.0); // r1.xyz
                 
                 float3 camRightDir = normalize(UNITY_MATRIX_V._11_21_31); //r0.xyz
-                // camRightDir.x = unity_MatrixV[0].x;
-                // camRightDir.y = unity_MatrixV[1].x;
-                // camRightDir.z = unity_MatrixV[2].x;
-                // camRightDir = normalize(camRightDir); //r0.xyz
-                
                 float3 camUpDir = normalize(UNITY_MATRIX_V._12_22_32); //r2.xyz
-                // camUpDir.x = unity_MatrixV[0].y;
-                // camUpDir.y = unity_MatrixV[1].y;
-                // camUpDir.z = unity_MatrixV[2].y;
-                // camUpDir = normalize(camUpDir); //r2.xyz
                 
                 worldPos.xyz = worldPos + camRightDir * effectTransform.x + camUpDir * effectTransform.y; //r0.xyz
                 worldPos = mul(unity_ObjectToWorld, float4(worldPos.xyz, 1)); //r0.xyzw
@@ -193,11 +174,6 @@ Shader "VF Shaders/Forward/Rocket Effect Instancing REPLACE" {
                 o.unk2.xyzw = float4(0,0,1,0);
                 
                 o.screenPos.xyw = ComputeScreenPos(clipPos).xyw;
-                
-                // r0.y = unity_MatrixV[1].z * worldPos.y;
-                // r0.x = unity_MatrixV[0].z * worldPos.x + r0.y;
-                // r0.x = unity_MatrixV[2].z * worldPos.z + r0.x;
-                // r0.x = unity_MatrixV[3].z * worldPos.w + r0.x;
                 o.screenPos.z = -dot(UNITY_MATRIX_V._13_23_33_43, worldPos);
                 
                 o.effSelect.xyzw = effectSelOutput.xyzw;
@@ -230,14 +206,10 @@ Shader "VF Shaders/Forward/Rocket Effect Instancing REPLACE" {
                 float4 effTex1 = tex2D(_EffectTex1, i.uv_uv.xy); //r3.xyzw
                 float4 effTex2 = tex2D(_EffectTex2, i.uv_uv.xy); //r4.xyzw
                 
-                float2 emissionUV;
-                emissionUV.x = i.uv_uv.x * 0.8 + (_Time.y - 3.0);
-                emissionUV.y = i.uv_uv.y;
+                float2 emissionUV = float2(0.8 * i.uv_uv.x + _Time.y - 3.0, i.uv_uv.y);
                 float3 emission = tex2D(_EmissionTex, emissionUV); //r1.xyz
                 
-                float2 jitterUV;
-                jitterUV.x = _Time.y;
-                jitterUV.y = 0.0;
+                float2 jitterUV = float2(_Time.y, 0);
                 float jitter = tex2D(_EmissionJitterTex, jitterUV).x; //r0.z
                 jitter = lerp(1.0, jitter, _EmissionJitter);
                 
@@ -253,19 +225,18 @@ Shader "VF Shaders/Forward/Rocket Effect Instancing REPLACE" {
                 effTex2.xyz = pow(_Color.xyz * _AlbedoMultiplier * effTex2.xyz, 1.1);
                 effTex2.w = i.unk2.z * effTex2.w; //r4.xyzw
                 
-                float2 warpUV;
-                warpUV.x = i.unk2.w;
-                warpUV.y = 0.5;
+                float2 warpUV = float2(i.unk2.w, 0.5);
                 float4 warpMap = tex2Dbias(_WarpMap, float4(warpUV, 0, 0)); //r3.xyzw
                 
-                float4 finalColor = 2.6 * i.effSelect.zzzz * effTex2.xyzw * jitter
-                                  + 0.8 * i.effSelect.xxxx * mainTex.xyzw
-                                  + 1.3 * i.effSelect.yyyy * effTex1.xyzw * jitter;
-                finalColor.xyz = finalColor.xyz * fade;
-                finalColor.xyz = saturate(5 * i.unk2.w) * (dot(finalColor.xyz, float3(0.36, 0.72, 0.12)) - finalColor.xyz * 1.2) + 1.2 * finalColor.xyz;
+                float4 finalColor =
+                    0.8 * mainTex.xyzw * i.effSelect.x
+                    + 1.3 * effTex1.xyzw * i.effSelect.y * jitter
+                    + 2.6 * effTex2.xyzw * i.effSelect.z * jitter; //r0.xyzw
+                finalColor = fade * finalColor;
+                finalColor.xyz = lerp(finalColor.xyz * 1.2, dot(finalColor.xyz, float3(0.36, 0.72, 0.12)), saturate(i.effSelect.w * 5.0));
                 
-                o.sv_target.xyz = (exp2(log(10)/log(2) * warpMap.w) - 1.0) * warpMap.xyz * finalColor.xyz + finalColor.xyz;
-                o.sv_target.w = finalColor.w;
+                o.sv_target.xyz = warpMap.xyz * (pow((log(10)/log(2)) * warpMap.w, 2) - 1.0) * finalColor.xyz + finalColor.xyz;
+                o.sv_target.w = finalColor.w * 1.2;
                 
                 return o;
             }

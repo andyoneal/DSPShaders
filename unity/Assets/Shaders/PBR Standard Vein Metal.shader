@@ -586,7 +586,7 @@ Shader "VF Shaders/Forward/PBR Standard Vein Metal REPLACE" {
                 ambientLightColor = ambientLightColor * (_AmbientInc + 1);
                 
                 // Calculate mecha headlamp light. Only active during night.
-                float3 headlampLight = calculateLightFromHeadlamp(_Global_PointLightPos, upDir, lightDir, worldNormal);
+                float3 headlampLight = calculateLightFromHeadlamp(_Global_PointLightPos, upDir, lightDir, worldNormal, 5.0, 20.0, false);
                 
                 // Add the headlamp light color to the star and shadow light. 
                 float3 headlampLightColor = nDotL * lightColor + headlampLight;

@@ -661,7 +661,7 @@ Shader "VF Shaders/Forward/PBR Standard Vein Crystal REPLACE" {
                   // r3.xyz = float3(1.29999995,1.10000002,0.600000024) * r2.www;
                   // r3.xyz = r7.www ? r10.xyz : r3.xyz;
                   // r3.xyz = r1.zzz ? r3.xyz : 0;
-                  float3 headlampLight = calculateLightFromHeadlamp(_Global_PointLightPos, upDir, lightDir, worldNormal); //r3.xyz
+                  float3 headlampLight = calculateLightFromHeadlamp(_Global_PointLightPos, upDir, lightDir, worldNormal, 5.0, 20.0, false); //r3.xyz
                   
                   // r3.xyz = r4.www * r7.xyz + r3.xyz;
                   // r3.xyz = r3.xyz * r2.xyz;

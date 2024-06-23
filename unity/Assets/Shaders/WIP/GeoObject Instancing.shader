@@ -230,7 +230,7 @@ Shader "VF Shaders/Forward/GeoObject Instancing REPLACE"
                 ambientLightColor = ambientLightColor * albedo.xyz; //r2.xyz
 
                 float3 headlampLight =
-                    calculateLightFromHeadlamp(_Global_PointLightPos, i.upDir, lightDir, worldNormal); //r5.xyz
+                    calculateLightFromHeadlamp(_Global_PointLightPos, i.upDir, lightDir, worldNormal, 5.0, 20.0, false); //r5.xyz
 
                 float3 lightColor = sunlightColor * pow(1 - metallicLow, 0.6)
                     + headlampLight * (pow(1 - metallicLow, 0.6) * 0.2 + 0.8); //r13.xyz
@@ -240,29 +240,7 @@ Shader "VF Shaders/Forward/GeoObject Instancing REPLACE"
                 specularColor *= clamped_nDotL * (specularTerm + INV_TEN_PI); //r3.xyz
                 specularColor *= headlampLight + clamped_nDotL; //r3.xyz
 
-                float3 highlightLight;
-                if (_Global_PointLightPos.w >= 0.5)
-                {
-                    float distanceFromHeadlamp = length(_Global_PointLightPos.xyz) - 20; //r0.x
-                    float daylightDimFactor = saturate(dot(-i.upDir, lightDir) * 5.0);
-
-                    float3 directionToPlayer = _Global_PointLightPos.xyz - i.upDir * distanceFromHeadlamp; //r4.xzw
-                    float distObjToPlayer = length(directionToPlayer); //r0.x
-                    directionToPlayer /= distObjToPlayer;
-
-                    float falloff = pow(max(0, 0.025 * (40 - distObjToPlayer)), 2); //r0.z
-                    float lightIntensity = 20 * metal_smooth.y * falloff * pow(
-                        max(0, dot(worldNormal, directionToPlayer)), exp2(9.965784 * metal_smooth.y)); //r0.x
-                    lightIntensity = distObjToPlayer < 0.001 ? 1 : lightIntensity;
-                    lightIntensity *= saturate(distanceFromHeadlamp) * daylightDimFactor;
-
-                    highlightLight = float3(1.3, 1.1, 0.6);
-                    highlightLight *= lightIntensity; //r0.xyz
-                }
-                else
-                {
-                    highlightLight = float3(0, 0, 0);
-                }
+                float3 highlightLight = calculateLightFromHeadlamp(_Global_PointLightPos, i.upDir, lightDir, worldNormal, 20.0, 40.0, true);
 
                 float3 scaledAlbedo = albedo.xyz * float3(0.5, 0.5, 0.5) + float3(0.5, 0.5, 0.5); //r2.xyz
                 specularColor = lerp(metallicLow, 1, albedo.r * 0.2) * (specularColor + scaledAlbedo * highlightLight.

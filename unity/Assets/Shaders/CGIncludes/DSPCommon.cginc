@@ -40,29 +40,29 @@ float SchlickFresnel_Approx(float F0, float vDotH)
     return F0 + (1 - F0) * exp2((-5.55473 * vDotH - 6.98316) * vDotH);
 }
 
-float3 calculateLightFromHeadlamp(float4 headlampPos, float3 upDir, float3 lightDir, float3 worldNormal, float brightness) {
+float3 calculateLightFromHeadlamp(float4 headlampPos, float3 upDir, float3 lightDir, float3 normal, float lightSize, float lightRadius, float brightness, bool isReflected) {
     bool isHeadlampOn = headlampPos.w >= 0.5;
     if (!isHeadlampOn) return float3(0, 0, 0);
-
-    float distanceFromHeadlamp = length(headlampPos) - 5.0;
-    float headlampVisibility = saturate(distanceFromHeadlamp);
-    float daylightDimFactor = saturate(dot(-upDir, lightDir) * 5.0);
-
-    float3 directionToPlayer = headlampPos - upDir * distanceFromHeadlamp;
-    float distObjToPlayer = length(directionToPlayer);
-    directionToPlayer /= distObjToPlayer;
     
-    float falloff = pow(max((20.0 - distObjToPlayer) * 0.05, 0), 2);
-    float lightIntensity = falloff * saturate(dot(directionToPlayer, worldNormal));
-    lightIntensity = distObjToPlayer < 0.001 ? 1 : lightIntensity;
-    lightIntensity = lightIntensity * daylightDimFactor * headlampVisibility;
+    float lightCoreDistance = length(headlampPos) - lightSize; //r0.z
+    float lightingBlendFactor = saturate(5.0 * dot(-upDir, lightDir)) * saturate(lightCoreDistance); //r0.w
+    float3 nightLight = lightingBlendFactor * float3(1.3, 1.1, 0.6) * brightness;
     
-    float3 lightColor = float3(1.3, 1.1, 0.6) * brightness;
-    return lightColor * lightIntensity;
+    float3 worldPosForLighting = lightCoreDistance * upDir;
+    
+    float3 posToLight = headlampPos - worldPosForLighting; //r4.xyz
+    float distToLight = length(posToLight); //r0.z
+    float attenuation = pow(max(0, (lightRadius - distToLight) / lightRadius), 2.0); //r1.w
+    float3 nightLightDir = posToLight / distToLight; //r4.xyz
+    float lightAngle = saturate(dot(nightLightDir, normal)); //r0.z
+    
+    lightAngle = isReflected ? lightSize * smoothness * pow(lightAngle, exp2((-3.0 / log10(0.5)) * smoothness)) : lightAngle; //r0.z
+    
+    return distToLight < 0.001 ?  nightLight : attenuation * lightAngle * nightLight; //r0.yzw
 }
 
-float3 calculateLightFromHeadlamp(float4 headlampPos, float3 upDir, float3 lightDir, float3 worldNormal) {
-    return calculateLightFromHeadlamp(headlampPos, upDir, lightDir, worldNormal, 1.0);
+float3 calculateLightFromHeadlamp(float4 headlampPos, float3 upDir, float3 lightDir, float3 normal, float lightSize, float lightRadius, bool isReflected) {
+    return calculateLightFromHeadlamp(headlampPos, upDir, lightDir, worldNormal, lightSize, lightRadius, 1.0, isReflected);
 }
 
 float distributionGGX(float roughness, float nDotH) {

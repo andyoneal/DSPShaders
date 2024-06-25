@@ -62,6 +62,8 @@ Shader "VF Shaders/Dyson Sphere/Dyson Layer Painting Overlay REPLACE" {
             float3 _Global_DS_SunPosition;
             float _OrbitRadius;
             int _Global_DS_RenderPlace;
+            int _Global_VMapEnabled;
+            float3 _Global_DS_SunPosition_Map;
             int _IsGraticule;
             float _SuperBrightness;
             float _FinalMultiplier;
@@ -80,7 +82,7 @@ Shader "VF Shaders/Dyson Sphere/Dyson Layer Painting Overlay REPLACE" {
                 o.pos.xyzw = v.vertex.xyzw;
                 
                 float distCamToSun = distance(_Global_DS_SunPosition, _WorldSpaceCameraPos); //r0.x
-                distScaler = saturate((distCamToSun - 50000.0) / 100000.0) / 1000.0725 + 1.001; //r0.x
+                float distScaler = saturate((distCamToSun - 50000.0) / 100000.0) / 1000.0725 + 1.001; //r0.x
                 float4 localPos = _OrbitRadius * v.vertex.xyzw * distScaler;
                 float3 worldPos = mul(unity_ObjectToWorld, localPos).xyz; //r0.xyz
                 o.distToCam = distance(worldPos, _WorldSpaceCameraPos);
@@ -118,7 +120,7 @@ Shader "VF Shaders/Dyson Sphere/Dyson Layer Painting Overlay REPLACE" {
             [UNITY_domain("tri")]
             d2f domain(h2d i, OutputPatch<v2h, 3> patch, float3 coords : SV_DomainLocation)
             {
-                h2f o;
+                d2f o;
                 
                 float4 patchPos = patch[0].pos * coords.x + patch[1].pos * coords.y + patch[2].pos * coords.z; //r0.xyzw
                 float3 patchDir = normalize(patchPos.xyzw).xyz; //r0.xyz
@@ -135,10 +137,10 @@ Shader "VF Shaders/Dyson Sphere/Dyson Layer Painting Overlay REPLACE" {
                 camToPos = distCamToPos > 10000 ? camToPos * distanceScaler : camToPos;
                 bool inUniverse = _Global_DS_RenderPlace < 0.5; //r0.w
                 bool vMapEnabled = _Global_VMapEnabled > 0.5;
-                float3 worldPos = inUniverse && vMapEnabled ? float4(_WorldSpaceCameraPos + camToPos, 1.0) : worldPos.xyz; //r1.xyz
+                float3 newWorldPos = inUniverse && vMapEnabled ? float4(_WorldSpaceCameraPos + camToPos, 1.0) : worldPos.xyz; //r1.xyz
                 
-                float distPosToSun = distance(_Global_DS_SunPosition, worldPos); //r1.x
-                float distPosToSunMap = distance(_Global_DS_SunPosition_Map, worldPos); //r1.y
+                float distPosToSun = distance(_Global_DS_SunPosition, newWorldPos); //r1.x
+                float distPosToSunMap = distance(_Global_DS_SunPosition_Map, newWorldPos); //r1.y
                 distPosToSun = inUniverse ? distPosToSun : distPosToSunMap; //r1.x //backwards?
                 
                 float distCamToSunMap = 3999.99976 * distance(_Global_DS_SunPosition_Map, _WorldSpaceCameraPos); //r1.y
@@ -159,7 +161,7 @@ Shader "VF Shaders/Dyson Sphere/Dyson Layer Painting Overlay REPLACE" {
                 return o;
             }
             
-            fout frag(h2f i, uint primitiveID : SV_PrimitiveID)
+            fout frag(d2f i, uint primitiveID : SV_PrimitiveID)
             {
                 fout o;
                   
@@ -186,7 +188,7 @@ Shader "VF Shaders/Dyson Sphere/Dyson Layer Painting Overlay REPLACE" {
                 float2 screenPos = ComputeGrabScreenPos(i.clipPos); //r0.xy
                 float4 screenTex = tex2D(_ScreenTex_Painting, screenPos); //r0.xyzw
                 float4 linearColorAlphaBlended = screenTex.w * linearColor.xyzw;
-                linearColorAlphaBlended = (linearColor.xyzw - linearColorAlphaBlend) / 100.0 + linearColorAlphaBlend;
+                linearColorAlphaBlended = (linearColor.xyzw - linearColorAlphaBlended) / 100.0 + linearColorAlphaBlended;
                 
                 float multiplier = _Global_DS_RenderPlace > 0.5 ? _StarmapMultiplier : _InGameMultiplier; //r1.y
                 multiplier = _Global_DS_RenderPlace > 1.5 ? _EditorMultiplier : multiplier; //r1.x

@@ -1,9 +1,9 @@
 ManifestFileVersion: 0
-CRC: 3040182585
+CRC: 2981748943
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: d75d5fc8fcee0f6be445d3fe62133d16
+    Hash: 09cd532bb35a43beff3853a52e70dbc1
   TypeTreeHash:
     serializedVersion: 2
     Hash: 44d87ff5fe9d9e8c6f146a352e3e72cf
@@ -25,6 +25,9 @@ Assets:
 - Assets/Shaders/GasGiant.shader
 - Assets/Shaders/PBR Standard Vein Stone.shader
 - Assets/Shaders/Cargo Instancing.shader
+- Assets/Shaders/WIP/Logistic Ship Instancing.shader
+- Assets/Shaders/WIP/Rocket Effect Instancing.shader
+- Assets/Shaders/WIP/Rocket Instancing.shader
 - Assets/Shaders/PBR Standard Vein Metal.shader
 - Assets/Shaders/GasGiant2.shader
 - Assets/Shaders/Terrain Height Map.shader

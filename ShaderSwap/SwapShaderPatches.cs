@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using HarmonyLib;
 using UnityEngine;
 
@@ -55,6 +56,11 @@ public static class SwapShaderPatches
     
     private static void ReplaceShaderIfAvailable(Material mat)
     {
+        if (mat == null)
+        {
+            string callerInfo = GetCallerInfo();
+            ShaderSwap.logger.LogError($"Material is null. Called from {callerInfo}");
+        }
         var oriShaderName = mat.shader.name;
         if (ReplaceShaderMap.TryGetValue(oriShaderName, out var replacementShader))
         {
@@ -83,5 +89,23 @@ public static class SwapShaderPatches
             __instance.m_gpgpu.LODCullingShader = LODCulling;
             ShaderSwap.logger.LogInfo($"Replaced LODCulling compute shader");
         }
+    }
+
+    [HarmonyPatch(typeof(UIProductEntry), nameof(UIProductEntry._OnCreate))]
+    [HarmonyPostfix]
+    public static void UIProductEntry_OnCreate(UIProductEntry __instance)
+    {
+        ReplaceShaderIfAvailable(__instance.statGraph.material);
+    }
+    
+    private static string GetCallerInfo()
+    {
+        var stackTrace = new StackTrace(2, true); // Skip 2 frames to get the caller of YourFunction
+        var frame = stackTrace.GetFrame(0);
+        var method = frame.GetMethod();
+        var fileName = frame.GetFileName();
+        var lineNumber = frame.GetFileLineNumber();
+
+        return $"{method.DeclaringType}.{method.Name} (File: {fileName}, Line: {lineNumber})";
     }
 }

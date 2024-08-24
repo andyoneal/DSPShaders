@@ -1,4 +1,4 @@
-Shader "VF Shaders/Forward/Logistic Ship Instancing" {
+Shader "VF Shaders/Forward/Logistic Ship Instancing REPLACE" {
 	Properties {
 		_Color ("Color 颜色", Color) = (1,1,1,1)
 		_SpecularColor ("Specular Color", Color) = (1,1,1,1)
@@ -49,6 +49,29 @@ Shader "VF Shaders/Forward/Logistic Ship Instancing" {
                 uint itemId;
             };
 			
+			struct IconDesc
+			{
+				float4 faceColor;
+				float4 sideColor;
+				float4 faceEmission;
+				float4 sideEmission;
+				float4 iconEmission;
+				float4 reserved0;
+				float4 reserved1;
+				float metallic;
+				float smoothness;
+				float solidAlpha;
+				float iconAlpha;
+				float iconVari;
+				float liquidity;
+				float prop0;
+				float prop1;
+				float prop2;
+				float prop3;
+				float prop4;
+				float prop5;
+			};
+			
 			struct v2f
             {
                 float4 pos : SV_POSITION;
@@ -71,7 +94,7 @@ Shader "VF Shaders/Forward/Logistic Ship Instancing" {
 
 			StructuredBuffer<ShipRenderingData> _ShipBuffer;
             StructuredBuffer<uint> _Global_ItemIconIndexBuffer;
-            StructuredBuffer<float> _Global_ItemDescBuffer;
+            StructuredBuffer<IconDesc> _Global_ItemDescBuffer;
 			
 			float4 _LightColor0;
 			float4 _Global_AmbientColor0;
@@ -119,23 +142,23 @@ Shader "VF Shaders/Forward/Logistic Ship Instancing" {
                 float4 anim = _ShipBuffer[instanceID].anim;
                 o.anim.xyz = anim.xyz;
 
-                uint itemId = _ShipBuffer[instanceID].itemid; //r0.z //r0.w
+                uint itemId = _ShipBuffer[instanceID].itemId; //r0.z //r0.w
 
                 if (itemId > 0.5) {
                     uint itemDescIdx = _Global_ItemIconIndexBuffer[itemId]; //r0.z
                     itemDescIdx = 0.49999 + itemDescIdx; //r0.z
-                    int baseIndex = itemDesc * 40; //r0.w
+                    //int baseIndex = itemDescIdx * 40; //r0.w
 
-                    float3 faceColor; // r1.xyz
-                    faceColor.x = _Global_ItemDescBuffer[baseIndex];
-                    faceColor.y = _Global_ItemDescBuffer[baseIndex + 1];
-                    faceColor.z = _Global_ItemDescBuffer[baseIndex + 2];
+                    float3 faceColor = _Global_ItemDescBuffer[itemDescIdx].faceColor.xyz; // r1.xyz
+//                    faceColor.x = _Global_ItemDescBuffer[baseIndex];
+//                    faceColor.y = _Global_ItemDescBuffer[baseIndex + 1];
+//                    faceColor.z = _Global_ItemDescBuffer[baseIndex + 2];
                     faceColor = GammaToLinear_Approx(faceColor);
-
-                    float3 faceEmission; //r5.xyz
-                    faceEmission.x = _Global_ItemDescBuffer[baseIndex + 8];
-                    faceEmission.y = _Global_ItemDescBuffer[baseIndex + 9];
-                    faceEmission.z = _Global_ItemDescBuffer[baseIndex + 10];
+                	
+                    float3 faceEmission = _Global_ItemDescBuffer[itemDescIdx].faceEmission.xyz; //r5.xyz
+//                    faceEmission.x = _Global_ItemDescBuffer[baseIndex + 8];
+//                    faceEmission.y = _Global_ItemDescBuffer[baseIndex + 9];
+//                    faceEmission.z = _Global_ItemDescBuffer[baseIndex + 10];
                     faceEmission = GammaToLinear_Approx(faceEmission);
 
                     o.itemColor.xyz = faceEmission.xyz + faceColor.xyz;
@@ -188,15 +211,15 @@ Shader "VF Shaders/Forward/Logistic Ship Instancing" {
 
                 if (msTex.y < _AlphaClip - 0.001)
                     discard;
-
+				
                 float4 mainTex = tex2D(_MainTex, i.uv_gid.xy); //r1.xyzw
 
                 float3 unpackedNormal = UnpackNormal(tex2Dbias(_NormalTex, float4(i.uv_gid.xy, 0, -1)));
                 float3 normal = float3(_NormalMultiplier * unpackedNormal.xy, unpackedNormal.z);
                 normal = normalize(normal); //r2.xyz
 
-                float4 emissionTex = _EmissionTex.SampleBias(s6_s, i.uv_gid.xy, -1).xyzw; //r3.xyzw
-
+                float4 emissionTex = tex2Dbias(_EmissionTex, float4(i.uv_gid.xy,0,-1)).xyzw; //r3.xyzw
+				
                 float2 jitterUV = float2(i.anim.x, 0); //r4.xy
                 float jitterTex = tex2D(_EmissionJitterTex, jitterUV).x; // r2.w
 
@@ -218,12 +241,12 @@ Shader "VF Shaders/Forward/Logistic Ship Instancing" {
                 float3 posToCam = _WorldSpaceCameraPos - worldPos; //r7.xyz
                 float3 viewDir = normalize(posToCam); //r8.xyz
 
-                UNITY_LIGHT_ATTENUATION(atten, inp, worldPos); //r0.w
+                UNITY_LIGHT_ATTENUATION(atten, i, worldPos); //r0.w
 
                 float3 worldNormal = float3(
-                    dot(TBNW0.xyz, normal),
-                    dot(TBNW1.xyz, normal),
-                    dot(TBNW2.xyz, normal)
+                    dot(i.TBNW0.xyz, normal),
+                    dot(i.TBNW1.xyz, normal),
+                    dot(i.TBNW2.xyz, normal)
                 );
                 worldNormal = normalize(worldNormal); //r2.xyz
 
@@ -247,7 +270,7 @@ Shader "VF Shaders/Forward/Logistic Ship Instancing" {
                 float nDotUp = dot(worldNormal, upDir); // r7.x
 
                 float reflectivity; //r0.x
-                float3 reflectColor = reflection(perceptualRoughness, metallicLow, upDir, viewDir, worldNormal, /*out*/ reflectivity); //r7.yzw
+                float3 reflectColor = reflection(perceptualRoughness, metallic, upDir, viewDir, worldNormal, /*out*/ reflectivity); //r7.yzw
 
                 float3 sunlightColor = calculateSunlightColor(_LightColor0, upDotL, _Global_SunsetColor0.xyz, _Global_SunsetColor1.xyz, _Global_SunsetColor2.xyz); //r9.xyz
                 atten = 0.8 * lerp(atten, 1.0, saturate(0.15 * upDotL)); //r0.w
@@ -331,12 +354,14 @@ Shader "VF Shaders/Forward/Logistic Ship Instancing" {
 			{
 				float4 sv_target : SV_Target0;
 			};
+
+			StructuredBuffer<ShipRenderingData> _ShipBuffer;
 			
 			float _AlphaClip;
 			
 			sampler2D _MS_Tex;
 			
-			v2f vert(appdata_full v)
+			v2f vert(appdata_full v, uint instanceID : SV_InstanceID)
 			{
                 v2f o;
 			    
@@ -363,7 +388,7 @@ Shader "VF Shaders/Forward/Logistic Ship Instancing" {
                 return o;
 			}
 			
-			fout frag(v2f inp)
+			fout frag(v2f i)
 			{
                 fout o;
 

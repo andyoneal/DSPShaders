@@ -95,7 +95,7 @@ Shader "VF Shaders/Dyson Sphere/Dyson Layer Painting Overlay REPLACE" {
                 h2d o;
                 
                 uint renderPlace = _Global_DS_RenderPlace; //r0.x
-                float orbitRadius = renderPlace < 0.5 ? _OrbitRadius : _OrbitRadius * 0.00025; //r0.x
+                float orbitRadius = renderPlace < 0.5 ? _OrbitRadius : _OrbitRadius * 0.0003; //r0.x
                 float avgDistToCam = (patch[1].distToCam + patch[0].distToCam + patch[2].distToCam) / 3.0; //r0.y
                 
                 float tessFactor = avgDistToCam < orbitRadius / 20.0 ? 3.0 : 1.0; //r0.x

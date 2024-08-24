@@ -63,8 +63,16 @@ Shader "UI Ex/Production Stat Histogram REPLACE" {
             float4 _ZeroColor;
             float _MaxCount1;
             
-            // _Buffer1 is a copy of the data in ProductData.count, selected by level (1min, 10min, etc), where production is the first 600 elements and consumption is the last 600, ordered from oldest to most recent production/consumption amounts. ProductData.count stores each time period divided over 600 samples, so if the 1 Hour time period is selected, each of the 600 elements shows production over 0.1 min.
-            // note that the array sent to _Buffer1 is long[1200] array, but the shader uses uint[]. this appears to the shader as 2 array elements per long (so it's uint[2400]), where all elements with an odd array index are 0. The odd indices are ignored, so if the time period selected is 100 hours and a single item is being produced at a rate of over 429.5k/min, it'd max out the graph. (100hr = 6000min / 600 = 10min per sample. max uint size is 4,294,967,295 / 10min = 429.5k/min)
+            /*
+             *_Buffer1 is a copy of the data in ProductData.count, selected by level (1min, 10min, etc), where production is the first 600 elements
+             * and consumption is the last 600, ordered from oldest to most recent production/consumption amounts. ProductData.count stores each
+             * time period divided over 600 samples, so if the 1 Hour time period is selected, each of the 600 elements shows production over 0.1 min.
+             * 
+             * note that the array sent to _Buffer1 is long[1200] array, but the shader uses uint[]. this appears to the shader as 2 array elements
+             * per long (so it's uint[2400]), where all elements with an odd array index are 0. The odd indices are ignored, so if the time period
+             * selected is 100 hours and a single item is being produced at a rate of over 429.5k/min, it'd max out the graph. (100hr = 6000min / 600
+             * = 10min per sample. max uint size is 4,294,967,295 / 10min = 429.5k/min)
+            */
             StructuredBuffer<uint> _Buffer1;
 
             v2f vert(appdata_min v)

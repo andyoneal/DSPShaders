@@ -151,6 +151,30 @@ Shader "UI Ex/Production Stat Histogram REPLACE" {
                 
                 //draw the data or the dimmed background patterns
                 float brightness = shouldDrawAsData ? 1.0 : 0.15 * bgPatterns;
+
+                /* the following is not part of the vanilla shader. just a sample added feature: net production line */
+
+                float otherBaseIndex = drawingProduction ? 1200 : 0;
+                uint otherIndex = otherBaseIndex + indexOffset;
+                uint otherCount = _Buffer1[otherIndex];
+
+                uint prevIndexOffset = max(0, indexOffset - 1);
+                uint countPrev = _Buffer1[baseIndex + prevIndexOffset];
+                uint otherCountPrev = _Buffer1[otherBaseIndex + prevIndexOffset];
+                
+                float prodCount = drawingProduction ? (count + countPrev) / 2.0 : (otherCount + otherCountPrev) / 2.0;
+                float consumeCount = drawingProduction ? (otherCount + otherCountPrev) / 2.0 : (count + countPrev) / 2.0;
+
+                float netProduction = prodCount - consumeCount;
+                bool netIsPositive = netProduction > 0;
+                float netPctOfMax = abs(netProduction) / maxCount;
+                bool shouldDrawNetLine = abs(graphVertOffset - netPctOfMax) < (8.0/400.0);
+                shouldDrawNetLine = shouldDrawNetLine && netIsPositive == drawingProduction;
+
+                dataColor = shouldDrawNetLine ? float4(1,1,1,1) : dataColor;
+                brightness = shouldDrawNetLine ? 1.0 : brightness;
+
+                /* end non-vanilla section */
                 
                 //output the produce/consumed color, brightness determined by where this pixel falls on the graph, and the constant multiplier (1.52).
                 o.sv_target.xyzw = dataColor * brightness * _Multiplier;

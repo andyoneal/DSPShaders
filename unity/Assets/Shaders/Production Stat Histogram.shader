@@ -64,7 +64,7 @@ Shader "UI Ex/Production Stat Histogram REPLACE" {
             float _MaxCount1;
             
             /*
-             *_Buffer1 is a copy of the data in ProductData.count, selected by level (1min, 10min, etc), where production is the first 600 elements
+             * _Buffer1 is a copy of the data in ProductData.count, selected by level (1min, 10min, etc), where production is the first 600 elements
              * and consumption is the last 600, ordered from oldest to most recent production/consumption amounts. ProductData.count stores each
              * time period divided over 600 samples, so if the 1 Hour time period is selected, each of the 600 elements shows production over 0.1 min.
              * 
@@ -92,7 +92,7 @@ Shader "UI Ex/Production Stat Histogram REPLACE" {
             {
                 fout o;
                 
-                // Coordinates of the where the current pixel falls on the graph. (0,0) is bottom-left, (1,1) is top-right.
+                // Coordinates of where this pixel falls on the graph. (0,0) is bottom-left, (1,1) is top-right.
                 float2 graphCoords = i.uv;
                 
                 float offsetFromYCenter = abs(graphCoords.y - Y_CENTER);
@@ -112,10 +112,13 @@ Shader "UI Ex/Production Stat Histogram REPLACE" {
                 if (graphVertOffset > 1)
                     discard;
                 
-                // based on where the horizontal position of this pixel, determine which sample it represents of the 600 possible.
+                // based on the horizontal position of this pixel, determine which sample it represents of the 600 possible.
                 float sampleNumber = round(graphCoords.x * LEVEL_LENGTH - 0.5);
                 
-                //generate the background patterns for the graph, which includes and fine pattern every other sample and a coarse pattern every 10 samples
+                /*
+                 * generate the background patterns for the graph, which includes a fine pattern on every other sample and a
+                 * coarse pattern on every 10 samples
+                */
                 //alternate 0 and 1 every other sample, adding 0.1 before saturating, resulting in 0.1 and 1 
                 float bgPatternEveryOther = 2.0 * frac(0.5 * sampleNumber);
                 bgPatternEveryOther = saturate(bgPatternEveryOther + 0.1);
@@ -135,7 +138,7 @@ Shader "UI Ex/Production Stat Histogram REPLACE" {
                 
                 //production starts at index 0. consumption starts at index 1200.
                 float baseIndex = drawingProduction ? 0 : 1200;
-                // add the sample offset (times 2 since we're converting longs to uints)
+                //add the sample offset (times 2 since we're viewing longs as uints)
                 uint indexOffset = 2 * sampleNumber;
                 uint index = baseIndex + indexOffset;
                 //finally, grab the actual count produced/consumed from the buffer

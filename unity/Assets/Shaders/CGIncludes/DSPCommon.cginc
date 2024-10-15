@@ -40,6 +40,17 @@ float SchlickFresnel_Approx(float F0, float vDotH)
     return F0 + (1 - F0) * exp2((-5.55473 * vDotH - 6.98316) * vDotH);
 }
 
+float3 WorldNormalFromNormalMap(float2 uv, float normalMult, float3x3 TBN)
+{
+    float3 unpackedNormal = UnpackNormal(tex2Dbias(_NormalTex, float4(uv, 0, -1)));
+    float3 normal = float3(normalMult * unpackedNormal.xy, unpackedNormal.z);
+    normal = normalize(normal);
+    float3 worldNormal = mul(normal, TBN);
+    worldNormal = normalize(worldNormal); //r2.xyz
+    
+    return worldNormal;
+}
+
 float3 calculateLightFromHeadlamp(float4 headlampPos, float3 upDir, float3 lightDir, float3 normal, float lightSize, float lightRadius, float brightness, bool isReflected, float smoothness) {
     bool isHeadlampOn = headlampPos.w >= 0.5;
     if (!isHeadlampOn) return float3(0, 0, 0);
@@ -254,4 +265,93 @@ float4x4 quaternionToMatrix(float4 quat)
     m[2][2] = 1.0 - (xx + yy);
     m[3][3] = 1.0;
 	return m;
+}
+
+int _Mono_Inst;
+float3 _Mono_Pos;
+float4 _Mono_Rot;
+
+float _Mono_Anim_Time;
+float _Mono_Anim_LP;
+float _Mono_Anim_LW;
+uint _Mono_Anim_State;
+float _Mono_Anim_Power;
+
+float _Mono_State;
+
+float3 _Mono_Scl;
+
+float _UseScale;
+
+StructuredBuffer<uint> _IdBuffer;
+StructuredBuffer<GPUOBJECT> _InstBuffer;
+StructuredBuffer<AnimData> _AnimBuffer;
+StructuredBuffer<float3> _ScaleBuffer;
+StructuredBuffer<uint> _StateBuffer;
+
+void LoadVFINSTWithMono(uint instanceID, uint vertexID, inout float3 vertex, inout float3 normal, inout float3 tangent, inout float3 upDir, inout float time, inout float prepare_length, inout float working_length, inout uint animState, inout float power, inout uint state)
+{
+    
+    uint instId, objId;
+    float3 pos, scale;
+    float4 rot;
+    
+    if (_Mono_Inst > 0)
+    {
+        instId = 0;
+        objId = 0;
+        
+        pos = _Mono_Pos;
+        rot = _Mono_Rot;
+        
+        time = _Mono_Anim_Time;
+        prepare_length = _Mono_Anim_LP;
+        working_length = _Mono_Anim_LW;
+        animState = _Mono_Anim_State;
+        power = _Mono_Anim_Power;
+        
+        state = _Mono_State;
+        
+        scale = _Mono_Scl;
+    }
+    else
+    {
+        instId = _IdBuffer[instanceID];
+        
+        objId = _InstBuffer[instId].objId;
+        
+        pos.x = _InstBuffer[instId].posx;
+        pos.y = _InstBuffer[instId].posy;
+        pos.z = _InstBuffer[instId].posz;
+        
+        rot.x = _InstBuffer[instId].rotx;
+        rot.y = _InstBuffer[instId].roty;
+        rot.z = _InstBuffer[instId].rotz;
+        rot.w = _InstBuffer[instId].rotw;
+        
+        time = _AnimBuffer[objId].time;
+        prepare_length = _AnimBuffer[objId].prepare_length;
+        working_length = _AnimBuffer[objId].working_length;
+        animState = _AnimBuffer[objId].state;
+        power = _AnimBuffer[objId].power;
+        
+        state = _StateBuffer[instId];
+        
+        scale = _ScaleBuffer[instId];
+    }
+    
+    if(_UseScale > 0.5)
+    {
+        vertex *= scale;
+        normal *= scale;
+    }
+    
+    animateWithVerta(vertexID, time, prepare_length, working_length, vertex, normal, tangent);
+    
+    rot = normalize(rot);
+    vertex = rotate_vector_fast(vertex.xyz, rot) + pos;
+    normal = normalize(rotate_vector_fast(normal.xyz, rot));
+    tangent = rotate_vector_fast(tangent.xyz, rot);
+    
+    upDir = normalize(pos);
 }

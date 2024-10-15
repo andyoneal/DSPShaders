@@ -40,6 +40,8 @@ float SchlickFresnel_Approx(float F0, float vDotH)
     return F0 + (1 - F0) * exp2((-5.55473 * vDotH - 6.98316) * vDotH);
 }
 
+sampler2D _NormalTex;
+
 float3 WorldNormalFromNormalMap(float2 uv, float normalMult, float3x3 TBN)
 {
     float3 unpackedNormal = UnpackNormal(tex2Dbias(_NormalTex, float4(uv, 0, -1)));
@@ -319,15 +321,8 @@ void LoadVFINSTWithMono(uint instanceID, uint vertexID, inout float3 vertex, ino
         instId = _IdBuffer[instanceID];
         
         objId = _InstBuffer[instId].objId;
-        
-        pos.x = _InstBuffer[instId].posx;
-        pos.y = _InstBuffer[instId].posy;
-        pos.z = _InstBuffer[instId].posz;
-        
-        rot.x = _InstBuffer[instId].rotx;
-        rot.y = _InstBuffer[instId].roty;
-        rot.z = _InstBuffer[instId].rotz;
-        rot.w = _InstBuffer[instId].rotw;
+        pos = _InstBuffer[instId].pos;
+        rot = _InstBuffer[instId].rot;
         
         time = _AnimBuffer[objId].time;
         prepare_length = _AnimBuffer[objId].prepare_length;

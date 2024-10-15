@@ -54,16 +54,16 @@ Shader "VF Shaders/Forward/PBR Standard Vertex Toggle Lab REPLACE" {
                 float4 TBNW0 : TEXCOORD0;
                 float4 TBNW1 : TEXCOORD1;
                 float4 TBNW2 : TEXCOORD2;
-                float3 uv_state : TEXCOORD3;
+                float3 uv_visible : TEXCOORD3;
                 float3 upDir : TEXCOORD4;
                 float3 time_animState_power : TEXCOORD5;
                 float3 vertexPos : TEXCOORD6;
                 float3 worldPos : TEXCOORD7;
                 float2 working_prepare : TEXCOORD8;
-                float3 indirectLighting : TEXCOORD9;
+                float3 indirectLight : TEXCOORD9;
                 UNITY_SHADOW_COORDS(11)
-                float3 unkUnused : TEXCOORD12;
-            }
+                float4 unkUnused : TEXCOORD12;
+            };
                                                 
             struct fout
             {
@@ -119,7 +119,7 @@ Shader "VF Shaders/Forward/PBR Standard Vertex Toggle Lab REPLACE" {
                 
                 LoadVFINSTWithMono(instanceID, vertexID, worldPos, worldNormal, worldTangent, upDir, time, prepare_length, working_length, animState, power, state);
                 
-                o.uv_visible.xy = v.uv.xy;
+                o.uv_visible.xy = v.texcoord.xy;
                 
                 /*
                 v.color.x has three values for three sections of the mesh:
@@ -195,7 +195,7 @@ Shader "VF Shaders/Forward/PBR Standard Vertex Toggle Lab REPLACE" {
                 if (msTex.y < _AlphaClip - 0.001)
                   discard;
                   
-                float3x3 TBN = float3x3(i.TBN0.xyz, i.TBN1.xyz, i.TBN2.xyz);
+                float3x3 TBN = float3x3(i.TBNW0.xyz, i.TBNW1.xyz, i.TBNW2.xyz);
                 float3 worldNormal = WorldNormalFromNormalMap(uv, _NormalMultiplier, TBN);
                 
                 float time = i.time_animState_power.x;
@@ -208,7 +208,7 @@ Shader "VF Shaders/Forward/PBR Standard Vertex Toggle Lab REPLACE" {
                 float emissionAlpha = lerp(1.0, saturate(animState), _EmissionSwitch * emission.w); //r0.z
                 emission.xyz = _EmissionMultiplier * emission.xyz * emissionAlpha; //r3.xyz
                 
-                float2 effectLOD = 2.0 * saturate(_LOD);
+                float effectLOD = 2.0 * saturate(_LOD);
                 float2 emissionEffect = tex2Dlod(_EmissionEffectTex, float4(uv, effectLOD, 0)).xy; //r4.xy
                 float emitBrightness = saturate(100.0 * emissionEffect.x); //r5.x
                 
@@ -314,17 +314,18 @@ Shader "VF Shaders/Forward/PBR Standard Vertex Toggle Lab REPLACE" {
                 float smoothness = saturate(_SmoothMultiplier * msTex.z); //r0.y
                 
                 float3 specularColor = _SpecularColor.xyz; //r5.xyz
-                float3 worldPos = float3(i.TBN0.w, i.TBN1.w, i.TBN2.w); //r6.yzw
+                float3 worldPos = float3(i.TBNW0.w, i.TBNW1.w, i.TBNW2.w); //r6.yzw
                 
                 UNITY_LIGHT_ATTENUATION(atten, i, worldPos); //r0.w
                 
-                float metallic = metallic * 0.85 + 0.149; //r6.y
+                metallic = metallic * 0.85 + 0.149; //r6.y
                 
                 float perceptualRoughness = 1.0 - smoothness * 0.97; //r0.x
                 float roughness = perceptualRoughness * perceptualRoughness; //r0.z
                 
                 float3 upDir = i.upDir.xyz; //r4.xyz
                 float3 viewDir = normalize(_WorldSpaceCameraPos - worldPos); //r8.xyz
+                float3 lightDir = _WorldSpaceLightPos0.xyz;
                 float3 halfDir = normalize(viewDir + lightDir); //r7.xyz
                 
                 float unclamped_nDotL = dot(worldNormal, lightDir); //r2.w
@@ -342,14 +343,14 @@ Shader "VF Shaders/Forward/PBR Standard Vertex Toggle Lab REPLACE" {
                 float reflectivity; //r0.x
                 float3 reflectColor = reflection(perceptualRoughness, metallic, upDir, viewDir, worldNormal, /*out*/ reflectivity); //r7.yzw
                 
-                float3 sunlightColor = calculateSunlightColor(_LightColor0.xyz, float upDotL, _Global_SunsetColor0.xyz, _Global_SunsetColor1.xyz, _Global_SunsetColor2.xyz); //r9.xyz
+                float3 sunlightColor = calculateSunlightColor(_LightColor0.xyz, upDotL, _Global_SunsetColor0.xyz, _Global_SunsetColor1.xyz, _Global_SunsetColor2.xyz); //r9.xyz
                 
                 atten = 0.8 * (saturate(0.15 * upDotL) * (1.0 - atten) + atten);
                 sunlightColor = atten * sunlightColor.xyz;
                 
                 float specularTerm = GGX(roughness, metallic + 0.5, nDotH, nDotV, nDotL, vDotH); //r0.w
                 
-                float3 ambientColor calculateAmbientColor(upDotL, _Global_AmbientColor0.xyz, _Global_AmbientColor1.xyz, _Global_AmbientColor2.xyz); //r10.xyw
+                float3 ambientColor = calculateAmbientColor(upDotL, _Global_AmbientColor0.xyz, _Global_AmbientColor1.xyz, _Global_AmbientColor2.xyz); //r10.xyw
                 float3 ambientLight = ambientColor * saturate(nDotUp * 0.3 + 0.7) * pow(1.0 + unclamped_nDotL * 0.35, 3.0); //r11.xyz
                 
                 float3 headlampLight = calculateLightFromHeadlamp(_Global_PointLightPos, upDir, lightDir, worldNormal, 5.0, 20.0, false, 1.0); //r2.xyz
@@ -378,7 +379,7 @@ Shader "VF Shaders/Forward/PBR Standard Vertex Toggle Lab REPLACE" {
                 float colorIntensity = dot(finalColor, float3(0.3, 0.6, 0.1)); //r0.w
                 finalColor = colorIntensity > 1.0 ? (finalColor / colorIntensity) * (log(log(colorIntensity) + 1) + 1) : finalColor;
                 
-                finalColor = albedo * i.indirectLighting.xyz + finalColor + emission.xyz;
+                finalColor = albedo * i.indirectLight.xyz + finalColor + emission.xyz;
                 
                 o.sv_target.xyz = finalColor;
                 o.sv_target.w = 1.0;

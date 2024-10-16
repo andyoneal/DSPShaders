@@ -392,118 +392,96 @@ Shader "VF Shaders/Forward/PBR Standard Vertex Toggle Lab REPLACE" {
             Name "ShadowCaster"
             LOD 200
             Tags { "DisableBatching" = "true" "LIGHTMODE" = "SHADOWCASTER" "RenderType" = "Opaque" "SHADOWSUPPORT" = "true" }
-            Cull Off
-            GpuProgramID 170810
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            #pragma target 5.0
+            #pragma multi_compile_shadowcaster
+            #pragma enable_d3d11_debug_symbols
             
             #include "UnityCG.cginc"
+            #include "AutoLight.cginc"
+            #include "CGIncludes/DSPCommon.cginc"
+            
             struct v2f
             {
-                float4 position : SV_POSITION0;
-                float3 texcoord1 : TEXCOORD1;
-                float3 texcoord2 : TEXCOORD2;
-                float3 texcoord3 : TEXCOORD3;
-                float3 texcoord4 : TEXCOORD4;
-                float3 texcoord5 : TEXCOORD5;
-                float2 texcoord6 : TEXCOORD6;
+                float4 pos : SV_POSITION0;
+                float3 uv_visible : TEXCOORD1;
+                float3 upDir : TEXCOORD2;
+                float3 time_animState_power : TEXCOORD3;
+                float3 vertexPos : TEXCOORD4;
+                float3 worldPos : TEXCOORD5;
+                float2 working_prepare : TEXCOORD6;
             };
+            
             struct fout
             {
                 float4 sv_target : SV_Target0;
             };
-            // $Globals ConstantBuffers for Vertex Shader
+            
             float _EmissionUsePower;
-            // $Globals ConstantBuffers for Fragment Shader
-            int _Mono_Inst;
             float _AlphaClip;
-            // Custom ConstantBuffers for Vertex Shader
-            // Custom ConstantBuffers for Fragment Shader
-            // Texture params for Vertex Shader
-            // Texture params for Fragment Shader
+            
             sampler2D _MS_Tex;
             
-            // Keywords: SHADOWS_DEPTH
-            v2f vert(appdata_full v)
+            v2f vert(appdata_full v, uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID)
             {
                 v2f o;
-                float4 tmp0;
-                float4 tmp1;
-                float4 tmp2;
-                tmp0.x = dot(v.normal.xyz, v.normal.xyz);
-                tmp0.x = rsqrt(tmp0.x);
-                tmp0.xyz = tmp0.xxx * v.normal.xyz;
-                tmp1.x = dot(tmp0.xyz, unity_WorldToObject._m00_m10_m20);
-                tmp1.y = dot(tmp0.xyz, unity_WorldToObject._m01_m11_m21);
-                tmp1.z = dot(tmp0.xyz, unity_WorldToObject._m02_m12_m22);
-                tmp0.x = dot(tmp1.xyz, tmp1.xyz);
-                tmp0.x = rsqrt(tmp0.x);
-                tmp0.xyz = tmp0.xxx * tmp1.xyz;
-                tmp1 = v.vertex.yyyy * unity_ObjectToWorld._m01_m11_m21_m31;
-                tmp1 = unity_ObjectToWorld._m00_m10_m20_m30 * v.vertex.xxxx + tmp1;
-                tmp1 = unity_ObjectToWorld._m02_m12_m22_m32 * v.vertex.zzzz + tmp1;
-                tmp1 = unity_ObjectToWorld._m03_m13_m23_m33 * v.vertex.wwww + tmp1;
-                tmp2.xyz = -tmp1.xyz * _WorldSpaceLightPos0.www + _WorldSpaceLightPos0.xyz;
-                tmp0.w = dot(tmp2.xyz, tmp2.xyz);
-                tmp0.w = rsqrt(tmp0.w);
-                tmp2.xyz = tmp0.www * tmp2.xyz;
-                tmp0.w = dot(tmp0.xyz, tmp2.xyz);
-                tmp0.w = -tmp0.w * tmp0.w + 1.0;
-                tmp0.w = sqrt(tmp0.w);
-                tmp0.w = tmp0.w * unity_LightShadowBias.z;
-                tmp0.xyz = -tmp0.xyz * tmp0.www + tmp1.xyz;
-                tmp0.w = unity_LightShadowBias.z != 0.0;
-                tmp0.xyz = tmp0.www ? tmp0.xyz : tmp1.xyz;
-                tmp2 = tmp0.yyyy * unity_MatrixVP._m01_m11_m21_m31;
-                tmp2 = unity_MatrixVP._m00_m10_m20_m30 * tmp0.xxxx + tmp2;
-                tmp0 = unity_MatrixVP._m02_m12_m22_m32 * tmp0.zzzz + tmp2;
-                tmp0 = unity_MatrixVP._m03_m13_m23_m33 * tmp1.wwww + tmp0;
-                tmp1.x = unity_LightShadowBias.x / tmp0.w;
-                tmp1.x = min(tmp1.x, 0.0);
-                tmp1.x = max(tmp1.x, -1.0);
-                tmp0.z = tmp0.z + tmp1.x;
-                tmp1.x = min(tmp0.w, tmp0.z);
-                o.position.xyw = tmp0.xyw;
-                tmp0.x = tmp1.x - tmp0.z;
-                o.position.z = unity_LightShadowBias.y * tmp0.x + tmp0.z;
-                tmp0.x = v.color.x - 0.2;
-                tmp0.y = saturate(tmp0.x * 3.4);
-                tmp0.x = tmp0.x < 0.5882353;
-                o.texcoord1.z = tmp0.x ? tmp0.y : 1.0;
-                o.texcoord1.xy = v.texcoord.xy;
-                o.texcoord2.xyz = float3(0.5773503, 0.5773503, 0.5773503);
-                o.texcoord3.xy = float2(0.0, 0.0);
-                o.texcoord3.z = 1.0 - _EmissionUsePower;
-                o.texcoord4.xyz = v.vertex.xyz;
-                o.texcoord5.xyz = v.vertex.xyz;
-                o.texcoord6.xy = float2(0.0, 0.0);
+                  
+                float3 worldPos = v.vertex.xyz;
+                float3 worldNormal = v.normal.xyz;
+                float3 worldTangent = v.tangent.xyz;
+                
+                float time, prepare_length, working_length, power;
+                uint animState, state;
+                float3 upDir;
+                
+                LoadVFINSTWithMono(instanceID, vertexID, worldPos, worldNormal, worldTangent, upDir, time, prepare_length, working_length, animState, power, state);
+                
+                o.uv_visible.xy = v.texcoord.xy;
+                
+                float color = v.color.x - 0.2; //r0.x
+                o.uv_visible.z = color < (149.99999/255.0) ? abs(saturate(3.4 * color) - state) : 1.0;
+                
+                o.upDir.xyz = upDir;
+                
+                o.time_animState_power.x = time;
+                o.time_animState_power.y = animState;
+                o.time_animState_power.z = lerp(1.0, power, _EmissionUsePower);
+                
+                o.vertexPos.xyz = v.vertex.xyz;
+                
+                o.working_prepare.x = working_length;
+                o.working_prepare.y = prepare_length;
+                
+                worldNormal = UnityObjectToWorldNormal(worldNormal);
+                
+                float4 clipPos = UnityClipSpaceShadowCasterPos(float4(worldPos, 1.0), worldNormal);
+                o.pos.xyzw = UnityApplyLinearShadowBias(clipPos);
+                
                 return o;
             }
-            // Keywords: SHADOWS_DEPTH
-            fout frag(v2f inp)
+            
+            fout frag(v2f i)
             {
                 fout o;
-                float4 tmp0;
-                tmp0.x = dot(inp.texcoord5.xyz, inp.texcoord5.xyz);
-                tmp0.x = sqrt(tmp0.x);
-                tmp0.y = _Mono_Inst > 0;
-                tmp0.x = tmp0.x < 200.2;
-                tmp0.x = tmp0.x ? tmp0.y : 0.0;
-                if (tmp0.x) {
+                  
+                float worldHeight = length(i.worldPos.xyz);
+                bool isUnderground = worldHeight < 200.2;
+                bool isMonoInst = _Mono_Inst > 0;
+                if (isUnderground && isMonoInst)
                     discard;
-                }
-                tmp0.x = inp.texcoord1.z < 0.5;
-                if (tmp0.x) {
+                
+                bool shouldHide = i.uv_visible.z < 0.5;
+                if (shouldHide)
                     discard;
-                }
-                tmp0.x = tex2D(_MS_Tex, inp.texcoord1.xy);
-                tmp0.y = _AlphaClip - 0.001;
-                tmp0.x = tmp0.x < tmp0.y;
-                if (tmp0.x) {
+                
+                float msTex = tex2D(_MS_Tex, uv).y;
+                if (msTex.y < _AlphaClip - 0.001)
                     discard;
-                }
-                o.sv_target = float4(0.0, 0.0, 0.0, 0.0);
+                
+                o.sv_target.xyzw = float4(0,0,0,0);
+                
                 return o;
             }
             ENDCG

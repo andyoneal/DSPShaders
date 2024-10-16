@@ -476,8 +476,9 @@ Shader "VF Shaders/Forward/PBR Standard Vertex Toggle Lab REPLACE" {
                 if (shouldHide)
                     discard;
                 
+                float2 uv = i.uv_visible.xy;
                 float msTex = tex2D(_MS_Tex, uv).y;
-                if (msTex.y < _AlphaClip - 0.001)
+                if (msTex < _AlphaClip - 0.001)
                     discard;
                 
                 o.sv_target.xyzw = float4(0,0,0,0);

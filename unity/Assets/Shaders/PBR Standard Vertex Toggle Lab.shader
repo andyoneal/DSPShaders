@@ -209,7 +209,7 @@ Shader "VF Shaders/Forward/PBR Standard Vertex Toggle Lab REPLACE" {
                 emission.xyz = _EmissionMultiplier * emission.xyz * emissionAlpha; //r3.xyz
                 
                 float effectLOD = 2.0 * saturate(_LOD);
-                float2 emissionEffect = tex2Dlod(_EmissionEffectTex, float4(uv, effectLOD, 0)).xy; //r4.xy
+                float2 emissionEffect = tex2Dlod(_EmissionEffectTex, float4(uv, 0, effectLOD)).xy; //r4.xy
                 float emitBrightness = saturate(100.0 * emissionEffect.x); //r5.x
                 
                 float effectColor = emissionEffect.y > 5.7 ? 0 : 6.0 - floor(emissionEffect.y * 5.1 + 0.2); //r4.y

@@ -42,6 +42,7 @@ Shader "VF Shaders/Forward/PBR Standard Vertex Toggle Lab REPLACE" {
             #pragma fragment frag
             #pragma target 5.0
             #pragma multi_compile_fwdbase nolightmap nodirlightmap nodynlightmap novertexlight
+            #pragma multi_compile __ _ENABLE_VFINST
             #pragma enable_d3d11_debug_symbols
             
             #include "UnityCG.cginc"
@@ -236,9 +237,9 @@ Shader "VF Shaders/Forward/PBR Standard Vertex Toggle Lab REPLACE" {
 
             fout frag(v2f i)
             {
-              fout o;
-            
-              float worldHeight = length(i.worldPos.xyz); //r0.x
+                fout o;
+                
+                float worldHeight = length(i.worldPos.xyz); //r0.x
                 bool isUnderground = worldHeight < 200.2;
                 bool isMonoInst = _Mono_Inst > 0; //r0.y
                 if (isUnderground && isMonoInst)
@@ -340,7 +341,7 @@ Shader "VF Shaders/Forward/PBR Standard Vertex Toggle Lab REPLACE" {
                 
                 
                 lightSquaresEffect = abs(time - lightSquaresEffect);
-                lightSquaresEffect = lightSquaresEffect < 0.5 ? 1.0 - lightSquaresEffect : lightSquaresEffect;
+                lightSquaresEffect = lightSquaresEffect > 0.5 ? 1.0 - lightSquaresEffect : lightSquaresEffect;
                 
                 float lod = 13.0; //r5.y
                 if (_LOD > 1.5)
@@ -456,6 +457,7 @@ Shader "VF Shaders/Forward/PBR Standard Vertex Toggle Lab REPLACE" {
             #pragma fragment frag
             #pragma target 5.0
             #pragma multi_compile_shadowcaster
+            #pragma multi_compile __ _ENABLE_VFINST
             #pragma enable_d3d11_debug_symbols
             
             #include "UnityCG.cginc"

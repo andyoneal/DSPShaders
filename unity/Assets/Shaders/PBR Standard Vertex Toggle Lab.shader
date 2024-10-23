@@ -606,6 +606,7 @@ Shader "VF Shaders/Forward/PBR Standard Vertex Toggle Lab REPLACE" {
                 o.time_animState_power.z = lerp(1.0, power, _EmissionUsePower);
                 
                 o.vertexPos.xyz = v.vertex.xyz;
+                o.worldPos = worldPos;
                 
                 o.working_prepare.x = working_length;
                 o.working_prepare.y = prepare_length;

@@ -26,6 +26,7 @@ Shader "VF Shaders/Forward/Unlit Additive Lab REPLACE" {
         Pass {
             Tags { "DisableBatching" = "true" "IGNOREPROJECTOR" = "true" "QUEUE" = "Transparent" "RenderType" = "Transparent" }
             Blend SrcAlpha One, SrcAlpha One
+            ColorMask RGB -1
             ZWrite Off
             Cull Off
             CGPROGRAM
@@ -60,8 +61,8 @@ Shader "VF Shaders/Forward/Unlit Additive Lab REPLACE" {
                 float4 sv_target : SV_Target0;
             };
 
-            StructuredBuffer<uint> _IdBuffer;
             StructuredBuffer<GPUOBJECT> _InstBuffer;
+            StructuredBuffer<uint> _IdBuffer;
             StructuredBuffer<AnimData> _AnimBuffer;
             StructuredBuffer<float3> _ScaleBuffer;
             StructuredBuffer<uint> _StateBuffer;
@@ -100,11 +101,11 @@ Shader "VF Shaders/Forward/Unlit Additive Lab REPLACE" {
             float3 _Center;
             float4 _MainTex_ST;
             
-            UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
             sampler2D _MainTex2;
             sampler2D _MainTex3;
             sampler2D _MainTex;
             sampler2D _MaskTex;
+            UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
 
             float3 RotateXZ(float3 pt, float angle)
             {

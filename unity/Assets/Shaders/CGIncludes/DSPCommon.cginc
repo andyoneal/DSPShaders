@@ -269,6 +269,7 @@ float4x4 quaternionToMatrix(float4 quat)
 	return m;
 }
 
+/*
 int _Mono_Inst;
 float3 _Mono_Pos;
 float4 _Mono_Rot;
@@ -350,3 +351,4 @@ void LoadVFINSTWithMono(uint instanceID, uint vertexID, inout float3 vertex, ino
     
     upDir = normalize(pos);
 }
+*/

@@ -69,6 +69,11 @@ Shader "VF Shaders/Forward/PBR Standard Vertex Toggle Lab REPLACE" {
             {
                 float4 sv_target : SV_Target0;
             };
+            
+            StructuredBuffer<uint> _IdBuffer;
+            StructuredBuffer<GPUOBJECT> _InstBuffer;
+            StructuredBuffer<AnimData> _AnimBuffer;
+            StructuredBuffer<float3> _ScaleBuffer;
                                                 
             float _EmissionUsePower;
             float4 _LightColor0;
@@ -117,7 +122,61 @@ Shader "VF Shaders/Forward/PBR Standard Vertex Toggle Lab REPLACE" {
                 uint animState, state;
                 float3 upDir;
                 
-                LoadVFINSTWithMono(instanceID, vertexID, worldPos, worldNormal, worldTangent, upDir, time, prepare_length, working_length, animState, power, state);
+                uint instId, objId;
+                float3 pos, scale;
+                float4 rot;
+                
+                if (_Mono_Inst > 0)
+                {
+                    instId = 0;
+                    objId = 0;
+                    
+                    pos = _Mono_Pos;
+                    rot = _Mono_Rot;
+                    
+                    time = _Mono_Anim_Time;
+                    prepare_length = _Mono_Anim_LP;
+                    working_length = _Mono_Anim_LW;
+                    animState = _Mono_Anim_State;
+                    power = _Mono_Anim_Power;
+                    
+                    state = _Mono_State;
+                    
+                    scale = _Mono_Scl;
+                }
+                else
+                {
+                    instId = _IdBuffer[instanceID];
+                    
+                    objId = _InstBuffer[instId].objId;
+                    pos = _InstBuffer[instId].pos;
+                    rot = _InstBuffer[instId].rot;
+                    
+                    time = _AnimBuffer[objId].time;
+                    prepare_length = _AnimBuffer[objId].prepare_length;
+                    working_length = _AnimBuffer[objId].working_length;
+                    animState = _AnimBuffer[objId].state;
+                    power = _AnimBuffer[objId].power;
+                    
+                    state = _StateBuffer[instId];
+                    
+                    scale = _ScaleBuffer[instId];
+                }
+                
+                if(_UseScale > 0.5)
+                {
+                    vertex *= scale;
+                    normal *= scale;
+                }
+                
+                animateWithVerta(vertexID, time, prepare_length, working_length, vertex, normal, tangent);
+                
+                rot = normalize(rot);
+                vertex = rotate_vector_fast(vertex.xyz, rot) + pos;
+                normal = normalize(rotate_vector_fast(normal.xyz, rot));
+                tangent = rotate_vector_fast(tangent.xyz, rot);
+                
+                upDir = normalize(pos);
                 
                 o.uv_visible.xy = v.texcoord.xy;
                 
@@ -436,7 +495,61 @@ Shader "VF Shaders/Forward/PBR Standard Vertex Toggle Lab REPLACE" {
                 uint animState, state;
                 float3 upDir;
                 
-                LoadVFINSTWithMono(instanceID, vertexID, worldPos, worldNormal, worldTangent, upDir, time, prepare_length, working_length, animState, power, state);
+                uint instId, objId;
+                float3 pos, scale;
+                float4 rot;
+                
+                if (_Mono_Inst > 0)
+                {
+                    instId = 0;
+                    objId = 0;
+                    
+                    pos = _Mono_Pos;
+                    rot = _Mono_Rot;
+                    
+                    time = _Mono_Anim_Time;
+                    prepare_length = _Mono_Anim_LP;
+                    working_length = _Mono_Anim_LW;
+                    animState = _Mono_Anim_State;
+                    power = _Mono_Anim_Power;
+                    
+                    state = _Mono_State;
+                    
+                    scale = _Mono_Scl;
+                }
+                else
+                {
+                    instId = _IdBuffer[instanceID];
+                    
+                    objId = _InstBuffer[instId].objId;
+                    pos = _InstBuffer[instId].pos;
+                    rot = _InstBuffer[instId].rot;
+                    
+                    time = _AnimBuffer[objId].time;
+                    prepare_length = _AnimBuffer[objId].prepare_length;
+                    working_length = _AnimBuffer[objId].working_length;
+                    animState = _AnimBuffer[objId].state;
+                    power = _AnimBuffer[objId].power;
+                    
+                    state = _StateBuffer[instId];
+                    
+                    scale = _ScaleBuffer[instId];
+                }
+                
+                if(_UseScale > 0.5)
+                {
+                    vertex *= scale;
+                    normal *= scale;
+                }
+                
+                animateWithVerta(vertexID, time, prepare_length, working_length, vertex, normal, tangent);
+                
+                rot = normalize(rot);
+                worldPos = rotate_vector_fast(vertex.xyz, rot) + pos;
+                worldNormal = normalize(rotate_vector_fast(normal.xyz, rot));
+                worldTangent = rotate_vector_fast(tangent.xyz, rot);
+                
+                upDir = normalize(pos);
                 
                 o.uv_visible.xy = v.texcoord.xy;
                 

@@ -123,7 +123,6 @@ Shader "VF Shaders/Forward/PBR Standard Vein Stone REPLACE" {
             sampler2D _MainTexB;
             sampler2D _OcclusionTex;
             UNITY_DECLARE_TEX2D(_MS_Tex);
-            sampler2D _NormalTex;
             sampler2D _EmissionTex;
             UNITY_DECLARE_TEX2D(_EmissionJitterTex);
             UNITY_DECLARE_TEXCUBE(_Global_LocalPlanetHeightmap);

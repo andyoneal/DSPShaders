@@ -156,6 +156,8 @@ void animateWithVerta(uint vertexID, float time, float prepare_length, float wor
     }
 }
 
+
+
 #else
 
 void animateWithVerta(uint vertexID, float time, float prepare_length, float working_length, inout float3 pos, inout float3 normal, inout float3 tangent) {

@@ -75,8 +75,27 @@ Shader "VF Shaders/Forward/PBR Standard Vertex Toggle Lab REPLACE" {
             StructuredBuffer<GPUOBJECT> _InstBuffer;
             StructuredBuffer<AnimData> _AnimBuffer;
             StructuredBuffer<float3> _ScaleBuffer;
-                                                
+            StructuredBuffer<uint> _StateBuffer;
+            
+            float _UseScale;
+            uint _Mono_Inst;
+            //uint _Mono_AstroId;
+            float3 _Mono_Pos;
+            //float3 _Mono_Pos2;
+            float4 _Mono_Rot;
+            //float4 _Mono_Rot2;
+            //float _Mono_T1;
+            //float _Mono_T2;
+            float3 _Mono_Scl;
+            float _Mono_Anim_Time;
+            float _Mono_Anim_LP;
+            float _Mono_Anim_LW;
+            uint _Mono_Anim_State;
+            float _Mono_Anim_Power;
+            uint _Mono_State;
+            
             float _EmissionUsePower;
+            
             float4 _LightColor0;
             float4 _Global_AmbientColor0;
             float4 _Global_AmbientColor1;
@@ -166,16 +185,16 @@ Shader "VF Shaders/Forward/PBR Standard Vertex Toggle Lab REPLACE" {
                 
                 if(_UseScale > 0.5)
                 {
-                    vertex *= scale;
-                    normal *= scale;
+                    worldPos *= scale;
+                    worldNormal *= scale;
                 }
                 
-                animateWithVerta(vertexID, time, prepare_length, working_length, vertex, normal, tangent);
+                animateWithVerta(vertexID, time, prepare_length, working_length, worldPos, worldNormal, worldTangent);
                 
                 rot = normalize(rot);
-                vertex = rotate_vector_fast(vertex.xyz, rot) + pos;
-                normal = normalize(rotate_vector_fast(normal.xyz, rot));
-                tangent = rotate_vector_fast(tangent.xyz, rot);
+                worldPos = rotate_vector_fast(worldPos.xyz, rot) + pos;
+                worldNormal = normalize(rotate_vector_fast(worldNormal.xyz, rot));
+                worldTangent = rotate_vector_fast(worldTangent.xyz, rot);
                 
                 upDir = normalize(pos);
                 
@@ -479,7 +498,29 @@ Shader "VF Shaders/Forward/PBR Standard Vertex Toggle Lab REPLACE" {
             {
                 float4 sv_target : SV_Target0;
             };
-            
+
+            StructuredBuffer<uint> _IdBuffer;
+            StructuredBuffer<GPUOBJECT> _InstBuffer;
+            StructuredBuffer<AnimData> _AnimBuffer;
+            StructuredBuffer<float3> _ScaleBuffer;
+            StructuredBuffer<uint> _StateBuffer;
+
+            float _UseScale;
+            uint _Mono_Inst;
+            //uint _Mono_AstroId;
+            float3 _Mono_Pos;
+            //float3 _Mono_Pos2;
+            float4 _Mono_Rot;
+            //float4 _Mono_Rot2;
+            //float _Mono_T1;
+            //float _Mono_T2;
+            float3 _Mono_Scl;
+            uint _Mono_State;
+            float _Mono_Anim_Time;
+            float _Mono_Anim_LP;
+            float _Mono_Anim_LW;
+            uint _Mono_Anim_State;
+            float _Mono_Anim_Power;
             float _EmissionUsePower;
             float _AlphaClip;
             
@@ -540,16 +581,16 @@ Shader "VF Shaders/Forward/PBR Standard Vertex Toggle Lab REPLACE" {
                 
                 if(_UseScale > 0.5)
                 {
-                    vertex *= scale;
-                    normal *= scale;
+                    worldPos *= scale;
+                    worldNormal *= scale;
                 }
                 
-                animateWithVerta(vertexID, time, prepare_length, working_length, vertex, normal, tangent);
+                animateWithVerta(vertexID, time, prepare_length, working_length, worldPos, worldNormal, worldTangent);
                 
                 rot = normalize(rot);
-                worldPos = rotate_vector_fast(vertex.xyz, rot) + pos;
-                worldNormal = normalize(rotate_vector_fast(normal.xyz, rot));
-                worldTangent = rotate_vector_fast(tangent.xyz, rot);
+                worldPos = rotate_vector_fast(worldPos.xyz, rot) + pos;
+                worldNormal = normalize(rotate_vector_fast(worldNormal.xyz, rot));
+                worldTangent = rotate_vector_fast(worldTangent.xyz, rot);
                 
                 upDir = normalize(pos);
                 

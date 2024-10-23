@@ -1,9 +1,9 @@
 ManifestFileVersion: 0
-CRC: 3366403621
+CRC: 2452101946
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: a5e838a65c9c510ed212b87360dc6f3b
+    Hash: 6ea0676c7b13652a08c4a11c2ea4c10e
   TypeTreeHash:
     serializedVersion: 2
     Hash: 44d87ff5fe9d9e8c6f146a352e3e72cf
@@ -14,20 +14,13 @@ ClassTypes:
 - Class: 72
   Script: {instanceID: 0}
 Assets:
-- Assets/Shaders/WIP/GeoObject Instancing.shader
-- Assets/Shaders/WIP/PBR Standard Vein Crystal.shader
-- Assets/Shaders/WIP/PBR Standard Chemical Glass MK2.shader
 - Assets/Shaders/Planet ATField Shape.shader
-- Assets/Shaders/WIP/Sun.shader
+- Assets/Shaders/Unlit Additive Lab.shader.shader
 - Assets/Shaders/LODCulling.compute
-- Assets/Shaders/WIP/Unlit DFRanger Effect.shader
-- Assets/Shaders/WIP/Star Body.shader
+- Assets/Shaders/PBR Standard Vertex Toggle Lab.shader
 - Assets/Shaders/GasGiant.shader
 - Assets/Shaders/PBR Standard Vein Stone.shader
 - Assets/Shaders/Cargo Instancing.shader
-- Assets/Shaders/WIP/Logistic Ship Instancing.shader
-- Assets/Shaders/WIP/Rocket Effect Instancing.shader
-- Assets/Shaders/WIP/Rocket Instancing.shader
 - Assets/Shaders/PBR Standard Vein Metal.shader
 - Assets/Shaders/GasGiant2.shader
 - Assets/Shaders/Terrain Height Map.shader

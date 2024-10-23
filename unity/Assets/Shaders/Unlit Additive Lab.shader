@@ -59,13 +59,14 @@ Shader "VF Shaders/Forward/Unlit Additive Lab REPLACE" {
             {
                 float4 sv_target : SV_Target0;
             };
-            
-            int _VertexSize;
-            int _VertexCount;
-            int _FrameCount;
+
+            StructuredBuffer<uint> _IdBuffer;
+            StructuredBuffer<GPUOBJECT> _InstBuffer;
+            StructuredBuffer<AnimData> _AnimBuffer;
+            StructuredBuffer<float3> _ScaleBuffer;
+            StructuredBuffer<uint> _StateBuffer;
             
             float _UseScale;
-            
             uint _Mono_Inst;
             //uint _Mono_AstroId;
             float3 _Mono_Pos;
@@ -97,12 +98,25 @@ Shader "VF Shaders/Forward/Unlit Additive Lab REPLACE" {
             float _InvFade;
             float _SideFade;
             float3 _Center;
+            float4 _MainTex_ST;
             
             UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
             sampler2D _MainTex2;
             sampler2D _MainTex3;
             sampler2D _MainTex;
             sampler2D _MaskTex;
+
+            float3 RotateXZ(float3 pt, float angle)
+            {
+                float s, c;
+                sincos(angle, s, c);
+                
+                return float3(
+                    pt.x * c - pt.z * s,   // x' = x*cos(θ) - z*sin(θ)
+                    pt.y,                     // y unchanged
+                    pt.x * s + pt.z * c    // z' = x*sin(θ) + z*cos(θ)
+                );
+            }
             
             v2f vert(appdata_full v, uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID)
             {
@@ -129,14 +143,14 @@ Shader "VF Shaders/Forward/Unlit Additive Lab REPLACE" {
                 uint objId = _InstBuffer[instId].objId; //r2.x
                 objId = monoInst ? 0 : objId; //r0.w
                 
-                float prepare_length = _AnimBuffer[r0.w].prepare_length; //r2.x
+                float prepare_length = _AnimBuffer[objId].prepare_length; //r2.x
                 prepare_length = monoInst ? _Mono_Anim_LP : prepare_length; //r1.x
                 bool inProduceMode = prepare_length < 0.5;
                 
                 float3 labColor = float3(1,1,1); //r2.yzw
                   
                 if (isRing || isTubeLasers) {
-                    working_length = _AnimBuffer[objId].working_length;
+                    float working_length = _AnimBuffer[objId].working_length;
                     working_length = monoInst ? _Mono_Anim_LW : working_length; // r2.x
                     
                     float colorSelect = working_length * pow(10.0, 1.0 - ringNum);
@@ -232,17 +246,17 @@ Shader "VF Shaders/Forward/Unlit Additive Lab REPLACE" {
                   
                 float3 vertPos = localPos.xyz + _Center.xyz; //r3.xyz
                 
-                uint objId = _InstBuffer[instId].objId; //r4.x
-                float4 pos = _InstBuffer[instId].pos; //r4.yzw
+                objId = _InstBuffer[instId].objId; //r4.x
+                float3 pos = _InstBuffer[instId].pos; //r4.yzw
                 
                 objId = monoInst ? 0 : objId;
                 pos = monoInst ? _Mono_Pos.xyz : pos;
                 
-                rot = _InstBuffer[instId].rot; //r5.xyzw
+                float4 rot = _InstBuffer[instId].rot; //r5.xyzw
                 rot = monoInst ? _Mono_Rot.xyzw : rot;
                 
                 float time = _AnimBuffer[objId].time; //r6.x
-                float prepare_length = _AnimBuffer[objId].prepare_length; //r6.y
+                prepare_length = _AnimBuffer[objId].prepare_length; //r6.y
                 float working_length = _AnimBuffer[objId].working_length; //r6.z
                 uint animState = _AnimBuffer[objId].state; //r6.w
                 
@@ -257,8 +271,8 @@ Shader "VF Shaders/Forward/Unlit Additive Lab REPLACE" {
                 float3 normal = v.normal.xyz;
                 float3 tangent = v.tangent.xyz;
                 
-                scale = _ScaleBuffer[instId];
-                scale = monoInst ? _Mono_Scl.xyz : scale
+                float3 scale = _ScaleBuffer[instId];
+                scale = monoInst ? _Mono_Scl.xyz : scale;
                   
                 if(_UseScale > 0.5)
                 {
@@ -354,7 +368,7 @@ Shader "VF Shaders/Forward/Unlit Additive Lab REPLACE" {
                 float4 screenPos = ComputeScreenPos(i.clipPos.xyzw); //r2.xyzw
                 float2 depthUV = (screenPos.xy + screenPos.zz) / screenPos.ww; //r0.yz
                 float sceneZ = LinearEyeDepth(tex2D(_CameraDepthTexture, depthUV).x);
-                o.sv_target.w = alpha * saturate(_InvFade * (sceneZ - i.screenPos.w));
+                o.sv_target.w = alpha * saturate(_InvFade * (sceneZ - screenPos.w));
                 
                 o.sv_target.xyz = finalColor.xyz * (1.0 - 0.8 * prepare_length);
                 
